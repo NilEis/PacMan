@@ -4,8 +4,11 @@ function(create_resources dir prefix output header)
   get_filename_component(header_name ${header} NAME)
   string(TOUPPER ${header_name} header_name_upper)
   string(REPLACE "." "_" header_name_upper ${header_name_upper})
+  string(TIMESTAMP timestamp_string "%Y-%m-%d - %H:%M:%S")
   # Create empty output file
-  file(WRITE ${header} "#ifndef ${header_name_upper}\n")
+  file(WRITE ${header} "")
+  file(APPEND ${header} "/*\n * generated: ${timestamp_string}\n */\n")
+  file(APPEND ${header} "#ifndef ${header_name_upper}\n")
   file(APPEND ${header} "#define ${header_name_upper}\n")
   file(APPEND ${header} "#include <stddef.h>\n")
   file(APPEND ${header} "#include <stdint.h>\n")
@@ -24,7 +27,7 @@ function(create_resources dir prefix output header)
     # Convert hex data for C compatibility
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," filedata ${filedata})
     # Append data to output file
-    file(APPEND ${output} "const uint8_t ${prefix}${filename}[] = {${filedata}};\n")
+    file(APPEND ${output} "const uint8_t ${prefix}${filename}[] = {${filedata}0x00};\n")
     file(APPEND ${output}
          "const size_t ${prefix}${filename}_size = sizeof(${prefix}${filename});\n")
 

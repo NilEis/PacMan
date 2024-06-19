@@ -2,6 +2,8 @@
 .vscode/
 build/
 build*/
+cmake-build*/
 analysis_build/
 analysis/
 .clangd
+.idea/
