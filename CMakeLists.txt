@@ -10,16 +10,15 @@ set(CMAKE_C_STANDARD 23)
 
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
 
+set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/maps.h
+${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
+
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/maps.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/maps.h
-        ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c
-        ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h
-        src/maps.c
-        include/maps.h)
+        ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${HEADERS})
 
 if (EMSCRIPTEN)
     set(SUPPORT_CLANGD
@@ -89,6 +88,10 @@ endif ()
 
 target_include_directories(
         ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/src/include)
+
+file(GLOB SDL_HEADER ${sdl_SOURCE_DIR}/include/SDL3/*.h)
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
 
 option(SUPPORT_CLANGD "Support clangd" ON)
 if (SUPPORT_CLANGD)

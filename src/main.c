@@ -1,6 +1,8 @@
+#include "maps.h"
 #define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_main.h"
+#include "SDL3/SDL_render.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3_image/SDL_image.h"
 #include "assets.h"
@@ -13,95 +15,23 @@
 #include <emscripten/html5.h>
 #endif
 
-#include <SDL3/SDL_render.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#if WIN32
+#include <Windows.h>
+#endif
 
 bool event_key (const SDL_Event *event, state_t *state);
-
-int SDL_AppIterate (void *appstate)
-{
-    const auto state = (state_t *)appstate;
-    const auto delta = SDL_GetTicks () - state->last_ticks;
-    state->delta = delta;
-    state->last_ticks = SDL_GetTicks ();
-
-    if (trigger_triggered (state, &state->trigger.pacman_animation))
-    {
-        state->pacman.animation = (state->pacman.animation + 1) % 4;
-        trigger_start_after (
-            state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
-    }
-    if (trigger_triggered (state, &state->trigger.pacman_move))
-    {
-        auto x = state->pacman.position.x;
-        auto y = state->pacman.position.y;
-        switch (state->pacman.direction)
-        {
-        case DIRECTION_RIGHT:
-            x++;
-            break;
-        case DIRECTION_LEFT:
-            x--;
-            break;
-        case DIRECTION_UP:
-            y--;
-            break;
-        case DIRECTION_DOWN:
-            y++;
-            break;
-        default:
-            break;
-        }
-        x = (x + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH;
-        y = (y + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT;
-        if (state->map[y * (int)GRID_WIDTH + x] != CELL_WALL
-            && state->map[y * (int)GRID_WIDTH + x] != CELL_GHOST_WALL)
-        {
-            state->pacman.position.x = x;
-            state->pacman.position.y = y;
-        }
-        trigger_start_after (
-            state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
-    }
-
-    SDL_SetRenderTarget (state->sdl.renderer, state->sdl.framebuffer_texture);
-    {
-        SDL_SetRenderDrawColor (state->sdl.renderer, 0, 0, 0, 0);
-        SDL_RenderClear (state->sdl.renderer);
-        SDL_RenderTexture (state->sdl.renderer,
-            state->sdl.sprites.atlas,
-            &state->sdl.sprites.map.pos,
-            NULL);
-        SDL_RenderTexture (state->sdl.renderer,
-            state->sdl.sprites.atlas,
-            &state->sdl.sprites
-                 .pacman[state->pacman.direction][state->pacman.animation]
-                 .pos,
-            &(SDL_FRect){ state->pacman.position.x * CELL_WIDTH,
-                state->pacman.position.y * CELL_HEIGHT,
-                CELL_WIDTH,
-                CELL_HEIGHT });
-    }
-    SDL_SetRenderTarget (state->sdl.renderer, NULL);
-    {
-        SDL_RenderTexture (
-            state->sdl.renderer, state->sdl.framebuffer_texture, NULL, NULL);
-    }
-    SDL_RenderPresent (state->sdl.renderer);
-    while (SDL_GetTicks () - state->last_ticks < TICK_SPEED)
-    {
-    }
-    return SDL_APP_CONTINUE;
-}
 
 int SDL_AppInit (void **appstate, int argc, char **argv)
 {
     (void)argc;
     (void)argv;
     state_t *state = calloc (1, sizeof (state_t));
-    memccpy (state->map, );
+    memcpy (state->map, map1, sizeof (state->map));
     state->pacman.position.x = 1;
     state->pacman.position.y = 1;
     state->pacman.direction = DIRECTION_LEFT;
@@ -123,6 +53,22 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     {
         goto error;
     }
+#if WIN32
+    {
+        HWND hwnd = (HWND)SDL_GetProperty (
+            SDL_GetWindowProperties (state->sdl.window),
+            "SDL.window.win32.hwnd",
+            NULL);
+
+        // Change window type to layered
+        // (https://stackoverflow.com/a/3970218/3357935)
+        SetWindowLong (hwnd,
+            GWL_EXSTYLE,
+            GetWindowLong (hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        SetLayeredWindowAttributes (
+            hwnd, RGB (128, 128, 128), 0, LWA_COLORKEY);
+    }
+#endif
     state->sdl.renderer = SDL_CreateRenderer (state->sdl.window, NULL);
     state->sdl.framebuffer_texture = SDL_CreateTexture (state->sdl.renderer,
         SDL_PIXELFORMAT_RGBA5551,
@@ -188,6 +134,82 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
 
 error:
     return -1;
+}
+
+int SDL_AppIterate (void *appstate)
+{
+    const auto state = (state_t *)appstate;
+    const auto delta = SDL_GetTicks () - state->last_ticks;
+    state->delta = delta;
+    state->last_ticks = SDL_GetTicks ();
+
+    if (trigger_triggered (state, &state->trigger.pacman_animation))
+    {
+        state->pacman.animation = (state->pacman.animation + 1) % 4;
+        trigger_start_after (
+            state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
+    }
+    if (trigger_triggered (state, &state->trigger.pacman_move))
+    {
+        auto x = state->pacman.position.x;
+        auto y = state->pacman.position.y;
+        switch (state->pacman.direction)
+        {
+        case DIRECTION_RIGHT:
+            x++;
+            break;
+        case DIRECTION_LEFT:
+            x--;
+            break;
+        case DIRECTION_UP:
+            y--;
+            break;
+        case DIRECTION_DOWN:
+            y++;
+            break;
+        default:
+            break;
+        }
+        x = (x + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH;
+        y = (y + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT;
+        if (state->map[y * (int)GRID_WIDTH + x] != CELL_WALL
+            && state->map[y * (int)GRID_WIDTH + x] != CELL_GHOST_WALL)
+        {
+            state->pacman.position.x = x;
+            state->pacman.position.y = y;
+        }
+        trigger_start_after (
+            state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
+    }
+
+    SDL_SetRenderTarget (state->sdl.renderer, state->sdl.framebuffer_texture);
+    {
+        SDL_SetRenderDrawColor (state->sdl.renderer, 128, 128, 128, 255);
+        SDL_RenderClear (state->sdl.renderer);
+        SDL_RenderTexture (state->sdl.renderer,
+            state->sdl.sprites.atlas,
+            &state->sdl.sprites.map.pos,
+            NULL);
+        SDL_RenderTexture (state->sdl.renderer,
+            state->sdl.sprites.atlas,
+            &state->sdl.sprites
+                 .pacman[state->pacman.direction][state->pacman.animation]
+                 .pos,
+            &(SDL_FRect){ state->pacman.position.x * CELL_WIDTH,
+                state->pacman.position.y * CELL_HEIGHT,
+                CELL_WIDTH,
+                CELL_HEIGHT });
+    }
+    SDL_SetRenderTarget (state->sdl.renderer, NULL);
+    {
+        SDL_RenderTexture (
+            state->sdl.renderer, state->sdl.framebuffer_texture, NULL, NULL);
+    }
+    SDL_RenderPresent (state->sdl.renderer);
+    while (SDL_GetTicks () - state->last_ticks < TICK_SPEED)
+    {
+    }
+    return SDL_APP_CONTINUE;
 }
 
 int SDL_AppEvent (void *appstate, const SDL_Event *event)
