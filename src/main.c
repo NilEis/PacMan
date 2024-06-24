@@ -20,10 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if WIN32
-#include <Windows.h>
-#endif
-
 bool event_key (const SDL_Event *event, state_t *state);
 
 int SDL_AppInit (void **appstate, int argc, char **argv)
@@ -53,76 +49,120 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     {
         goto error;
     }
-#if WIN32
-    {
-        HWND hwnd = (HWND)SDL_GetProperty (
-            SDL_GetWindowProperties (state->sdl.window),
-            "SDL.window.win32.hwnd",
-            NULL);
-
-        // Change window type to layered
-        // (https://stackoverflow.com/a/3970218/3357935)
-        SetWindowLong (hwnd,
-            GWL_EXSTYLE,
-            GetWindowLong (hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        SetLayeredWindowAttributes (
-            hwnd, RGB (128, 128, 128), 0, LWA_COLORKEY);
-    }
-#endif
     state->sdl.renderer = SDL_CreateRenderer (state->sdl.window, NULL);
     state->sdl.framebuffer_texture = SDL_CreateTexture (state->sdl.renderer,
         SDL_PIXELFORMAT_RGBA5551,
         SDL_TEXTUREACCESS_TARGET,
         TEXTURE_WIDTH,
         TEXTURE_HEIGHT);
+
+    {
+        state->sdl.sprites.map_filled.pos
+            = (SDL_FRect){ .x = 0.0, .y = 0.0, .w = 224.0, .h = 248.0 };
+        state->sdl.sprites.map.pos
+            = (SDL_FRect){ .x = 228.0, .y = 0.0, .w = 224.0, .h = 248.0 };
+
+        state->sdl.sprites.pacman[DIRECTION_RIGHT][2].pos
+            = state->sdl.sprites.pacman[DIRECTION_LEFT][2].pos
+            = state->sdl.sprites.pacman[DIRECTION_UP][2].pos
+            = state->sdl.sprites.pacman[DIRECTION_DOWN][2].pos
+            = state->sdl.sprites.pacman[DIRECTION_NONE][0].pos
+            = state->sdl.sprites.pacman[DIRECTION_NONE][1].pos
+            = state->sdl.sprites.pacman[DIRECTION_NONE][2].pos
+            = state->sdl.sprites.pacman[DIRECTION_NONE][3].pos
+            = (SDL_FRect){ .x = 488.0, .y = 0.0, .w = 15.0, .h = 15.0 };
+
+        state->sdl.sprites.pacman[DIRECTION_RIGHT][0].pos
+            = (SDL_FRect){ .x = 456.0, .y = 0.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_RIGHT][1].pos
+            = (SDL_FRect){ .x = 472.0, .y = 0.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_RIGHT][3].pos
+            = (SDL_FRect){ .x = 472.0, .y = 0.0, .w = 15.0, .h = 15.0 };
+
+        state->sdl.sprites.pacman[DIRECTION_LEFT][0].pos
+            = (SDL_FRect){ .x = 456.0, .y = 16.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_LEFT][1].pos
+            = (SDL_FRect){ .x = 472.0, .y = 16.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_LEFT][3].pos
+            = (SDL_FRect){ .x = 472.0, .y = 16.0, .w = 15.0, .h = 15.0 };
+
+        state->sdl.sprites.pacman[DIRECTION_UP][0].pos
+            = (SDL_FRect){ .x = 456.0, .y = 32.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_UP][1].pos
+            = (SDL_FRect){ .x = 472.0, .y = 32.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_UP][3].pos
+            = (SDL_FRect){ .x = 472.0, .y = 32.0, .w = 15.0, .h = 15.0 };
+
+        state->sdl.sprites.pacman[DIRECTION_DOWN][0].pos
+            = (SDL_FRect){ .x = 456.0, .y = 48.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_DOWN][1].pos
+            = (SDL_FRect){ .x = 472.0, .y = 48.0, .w = 15.0, .h = 15.0 };
+        state->sdl.sprites.pacman[DIRECTION_DOWN][3].pos
+            = (SDL_FRect){ .x = 472.0, .y = 48.0, .w = 15.0, .h = 15.0 };
+    }
+
     {
         SDL_IOStream *file = SDL_IOFromConstMem (
             asset_general_sprites_png, asset_general_sprites_png_size);
-        state->sdl.sprites.atlas
-            = IMG_LoadTexture_IO (state->sdl.renderer, file, SDL_TRUE);
+        SDL_Surface *full_asset_image
+            = IMG_LoadTyped_IO (file, SDL_TRUE, "PNG");
+        state->sdl.sprites.atlas = SDL_CreateTextureFromSurface (
+            state->sdl.renderer, full_asset_image);
+        SDL_Surface *map_surface
+            = SDL_CreateSurface (state->sdl.sprites.map.pos.w,
+                state->sdl.sprites.map.pos.h,
+                SDL_PIXELFORMAT_RGBA32);
+        const auto res = SDL_BlitSurface (full_asset_image,
+            &(SDL_Rect){ state->sdl.sprites.map.pos.x,
+                state->sdl.sprites.map.pos.y,
+                state->sdl.sprites.map.pos.w,
+                state->sdl.sprites.map.pos.h },
+            map_surface,
+            NULL);
+        if (res != 0)
+        {
+            printf ("%d: %s\n", res, SDL_GetError ());
+        }
+        for (auto y = 0; y < GRID_HEIGHT; y++)
+        {
+            for (auto x = 0; x < GRID_HEIGHT; x++)
+            {
+                uint32_t avg_pixel = 0;
+                for (auto yp = 0; yp < TILE_HEIGHT; yp++)
+                {
+                    for (auto xp = 0; xp < TILE_WIDTH; xp++)
+                    {
+                        uint8_t r = 1;
+                        uint8_t g = 2;
+                        uint8_t b = 3;
+                        const auto pixel
+                            = *(uint32_t *)((uint8_t *)map_surface->pixels
+                                            + (y * TILE_HEIGHT + yp)
+                                                  * map_surface->pitch
+                                            + (x * TILE_WIDTH + xp)
+                                                  * map_surface->format
+                                                        ->bytes_per_pixel);
+                        SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
+                        const auto i = (int)r << 16 | (int)g << 8 | b;
+                        avg_pixel += i;
+                        if (i != 0)
+                        {
+                            state->map[y * (int)GRID_WIDTH + x] = CELL_WALL;
+                            printf ("(%u, %u, %u) ",
+                                i >> 16 & 0xFF,
+                                i >> 8 & 0xFF,
+                                i & 0xFF);
+                            goto external_loop;
+                        }
+                    }
+                }
+external_loop:
+            }
+            printf ("\n---------------------------\n");
+        }
+        SDL_DestroySurface (full_asset_image);
+        SDL_DestroySurface (map_surface);
     }
-    state->sdl.sprites.map_filled.pos
-        = (SDL_FRect){ .x = 0.0, .y = 0.0, .w = 224.0, .h = 248.0 };
-    state->sdl.sprites.map.pos
-        = (SDL_FRect){ .x = 228.0, .y = 0.0, .w = 224.0, .h = 248.0 };
-
-    state->sdl.sprites.pacman[DIRECTION_RIGHT][2].pos
-        = state->sdl.sprites.pacman[DIRECTION_LEFT][2].pos
-        = state->sdl.sprites.pacman[DIRECTION_UP][2].pos
-        = state->sdl.sprites.pacman[DIRECTION_DOWN][2].pos
-        = state->sdl.sprites.pacman[DIRECTION_NONE][0].pos
-        = state->sdl.sprites.pacman[DIRECTION_NONE][1].pos
-        = state->sdl.sprites.pacman[DIRECTION_NONE][2].pos
-        = state->sdl.sprites.pacman[DIRECTION_NONE][3].pos
-        = (SDL_FRect){ .x = 488.0, .y = 0.0, .w = 15.0, .h = 15.0 };
-
-    state->sdl.sprites.pacman[DIRECTION_RIGHT][0].pos
-        = (SDL_FRect){ .x = 456.0, .y = 0.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_RIGHT][1].pos
-        = (SDL_FRect){ .x = 472.0, .y = 0.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_RIGHT][3].pos
-        = (SDL_FRect){ .x = 472.0, .y = 0.0, .w = 15.0, .h = 15.0 };
-
-    state->sdl.sprites.pacman[DIRECTION_LEFT][0].pos
-        = (SDL_FRect){ .x = 456.0, .y = 16.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_LEFT][1].pos
-        = (SDL_FRect){ .x = 472.0, .y = 16.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_LEFT][3].pos
-        = (SDL_FRect){ .x = 472.0, .y = 16.0, .w = 15.0, .h = 15.0 };
-
-    state->sdl.sprites.pacman[DIRECTION_UP][0].pos
-        = (SDL_FRect){ .x = 456.0, .y = 32.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_UP][1].pos
-        = (SDL_FRect){ .x = 472.0, .y = 32.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_UP][3].pos
-        = (SDL_FRect){ .x = 472.0, .y = 32.0, .w = 15.0, .h = 15.0 };
-
-    state->sdl.sprites.pacman[DIRECTION_DOWN][0].pos
-        = (SDL_FRect){ .x = 456.0, .y = 48.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_DOWN][1].pos
-        = (SDL_FRect){ .x = 472.0, .y = 48.0, .w = 15.0, .h = 15.0 };
-    state->sdl.sprites.pacman[DIRECTION_DOWN][3].pos
-        = (SDL_FRect){ .x = 472.0, .y = 48.0, .w = 15.0, .h = 15.0 };
 
     state->running = true;
     state->last_ticks = SDL_GetTicks ();
@@ -184,12 +224,28 @@ int SDL_AppIterate (void *appstate)
 
     SDL_SetRenderTarget (state->sdl.renderer, state->sdl.framebuffer_texture);
     {
-        SDL_SetRenderDrawColor (state->sdl.renderer, 128, 128, 128, 255);
+        SDL_SetRenderDrawColor (state->sdl.renderer, 0, 0, 0, 0);
         SDL_RenderClear (state->sdl.renderer);
         SDL_RenderTexture (state->sdl.renderer,
             state->sdl.sprites.atlas,
             &state->sdl.sprites.map.pos,
             NULL);
+        for (auto y = 0; y < GRID_HEIGHT; y++)
+        {
+            for (auto x = 0; x < GRID_HEIGHT; x++)
+            {
+                SDL_SetRenderDrawColor (state->sdl.renderer,
+                    0,
+                    0,
+                    (state->map[y * (int)GRID_WIDTH + x] == CELL_WALL) * 255,
+                    255);
+                SDL_RenderFillRect (state->sdl.renderer,
+                    &(SDL_FRect){ x * CELL_WIDTH,
+                        y * CELL_HEIGHT,
+                        CELL_WIDTH,
+                        CELL_HEIGHT });
+            }
+        }
         SDL_RenderTexture (state->sdl.renderer,
             state->sdl.sprites.atlas,
             &state->sdl.sprites
@@ -241,7 +297,7 @@ void SDL_AppQuit (void *appstate)
 
 bool event_key (const SDL_Event *event, state_t *state)
 {
-    switch (event->key.keysym.scancode)
+    switch (event->key.scancode)
     {
     case SDL_SCANCODE_ESCAPE:
         return true;
