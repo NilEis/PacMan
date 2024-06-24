@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 bool event_key (const SDL_Event *event, state_t *state);
 
 int SDL_AppInit (void **appstate, int argc, char **argv)
@@ -43,8 +45,15 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     {
         goto error;
     }
-    state->sdl.window = SDL_CreateWindow (
-        NAME, WIDTH, HEIGHT, SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT);
+    SDL_SetHint ("SDL_RENDER_SCALE_QUALITY", "0");
+    state->sdl.window = SDL_CreateWindow (NAME,
+        WIDTH,
+        HEIGHT,
+        SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT | SDL_WINDOW_RESIZABLE);
+    SDL_SetWindowSurfaceVSync (state->sdl.window, 1);
+    state->sdl.bordered = false;
+    state->sdl.width = WIDTH;
+    state->sdl.width = HEIGHT;
     if (state->sdl.window == NULL)
     {
         goto error;
@@ -56,6 +65,11 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         TEXTURE_WIDTH,
         TEXTURE_HEIGHT);
 
+    SDL_SetRenderLogicalPresentation (state->sdl.renderer,
+        WIDTH,
+        HEIGHT,
+        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE,
+        SDL_SCALEMODE_NEAREST);
     {
         state->sdl.sprites.map_filled.pos
             = (SDL_FRect){ .x = 0.0, .y = 0.0, .w = 224.0, .h = 248.0 };
@@ -145,20 +159,15 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
                         SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
                         const auto i = (int)r << 16 | (int)g << 8 | b;
                         avg_pixel += i;
-                        if (i != 0)
+                        if (b != 0)
                         {
                             state->map[y * (int)GRID_WIDTH + x] = CELL_WALL;
-                            printf ("(%u, %u, %u) ",
-                                i >> 16 & 0xFF,
-                                i >> 8 & 0xFF,
-                                i & 0xFF);
                             goto external_loop;
                         }
                     }
                 }
 external_loop:
             }
-            printf ("\n---------------------------\n");
         }
         SDL_DestroySurface (full_asset_image);
         SDL_DestroySurface (map_surface);
@@ -238,7 +247,7 @@ int SDL_AppIterate (void *appstate)
                     0,
                     0,
                     (state->map[y * (int)GRID_WIDTH + x] == CELL_WALL) * 255,
-                    255);
+                    (state->map[y * (int)GRID_WIDTH + x] == CELL_WALL) * 255);
                 SDL_RenderFillRect (state->sdl.renderer,
                     &(SDL_FRect){ x * CELL_WIDTH,
                         y * CELL_HEIGHT,
@@ -279,6 +288,7 @@ int SDL_AppEvent (void *appstate, const SDL_Event *event)
     case SDL_EVENT_KEY_DOWN:
         if (event_key (event, state))
             return SDL_APP_SUCCESS;
+        break;
     default:
         break;
     }
@@ -319,6 +329,10 @@ bool event_key (const SDL_Event *event, state_t *state)
         printf ("fps: %u\n", fps);
     }
     break;
+    case SDL_SCANCODE_H:
+        state->sdl.bordered = !state->sdl.bordered;
+        SDL_SetWindowBordered (state->sdl.window, state->sdl.bordered);
+        SDL_SetWindowResizable (state->sdl.window, state->sdl.bordered);
     }
     return false;
 }

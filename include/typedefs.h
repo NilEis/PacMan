@@ -58,6 +58,9 @@ typedef struct
             atlas_entry_t map;
             atlas_entry_t pacman[5][4];
         } sprites;
+        int width;
+        int height;
+        SDL_bool bordered;
     } sdl;
     struct
     {
