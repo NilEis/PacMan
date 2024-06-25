@@ -3,8 +3,10 @@ project(pacman C)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
+include(FetchContent)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
 set(CMAKE_C_STANDARD 23)
 
@@ -59,8 +61,6 @@ if (EMSCRIPTEN)
             "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
 endif ()
 
-include(FetchContent)
-
 FetchContent_Declare(sdl
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
         GIT_TAG origin/main)
@@ -73,7 +73,7 @@ FetchContent_MakeAvailable(sdl sdl_image)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} SDL3-static SDL3_image::SDL3_image)
+target_link_libraries(${PROJECT_NAME} SDL3-static SDL3_image::SDL3_image nuklear)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NAME="${PROJECT_NAME}")
 
 if (EMSCRIPTEN)

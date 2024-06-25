@@ -1,6 +1,15 @@
 #ifndef TYPEDEFS_H
 #define TYPEDEFS_H
 #include "SDL3/SDL_render.h"
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_STANDARD_BOOL
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#include "nuklear.h"
 
 #include <stdint.h>
 
@@ -46,22 +55,41 @@ typedef struct
 
 typedef struct
 {
+    float position[2];
+    float uv[2];
+    nk_byte col[4];
+} nk_sdl_vertex_t;
+
+typedef struct
+{
     struct
     {
-        SDL_Window *window;
-        SDL_Texture *framebuffer_texture;
-        SDL_Renderer *renderer;
         struct
         {
-            SDL_Texture *atlas;
-            atlas_entry_t map_filled;
-            atlas_entry_t map;
-            atlas_entry_t pacman[5][4];
-        } sprites;
-        int width;
-        int height;
-        SDL_bool bordered;
-    } sdl;
+            SDL_Window *window;
+            SDL_Texture *framebuffer_texture;
+            SDL_Renderer *renderer;
+            struct
+            {
+                SDL_Texture *font;
+                SDL_Texture *atlas;
+                atlas_entry_t map_filled;
+                atlas_entry_t map;
+                atlas_entry_t pacman[5][4];
+            } sprites;
+            int width;
+            int height;
+            SDL_FRect target_rect;
+            SDL_bool bordered;
+        } sdl;
+        struct
+        {
+            struct nk_context ctx;
+            struct nk_font_atlas atlas;
+            struct nk_draw_null_texture tex_null;
+            struct nk_buffer cmds;
+        } nuklear;
+    } video;
     struct
     {
         int_vec2_t position;
