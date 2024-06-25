@@ -62,6 +62,9 @@ static void nk_sdl_handle_grab (state_t *state);
 
 static int nk_sdl_handle_event (state_t *state, const SDL_Event *evt);
 
+static bool try_move (
+    const state_t *const state, int *x, int *y, const direction_t direction);
+
 int SDL_AppInit (void **appstate, int argc, char **argv)
 {
     (void)argc;
@@ -98,7 +101,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     state->video.sdl.width = HEIGHT;
     SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
     state->video.sdl.renderer
-        = SDL_CreateRenderer (state->video.sdl.window, NULL);
+        = SDL_CreateRenderer (state->video.sdl.window, nullptr);
     printf ("driver:\n");
     for (auto i = 0; i < SDL_GetNumRenderDrivers (); i++)
     {
@@ -273,27 +276,14 @@ int SDL_AppIterate (void *appstate)
     {
         auto x = state->pacman.position.x;
         auto y = state->pacman.position.y;
-        switch (state->pacman.direction)
+        if (try_move (state, &x, &y, state->pacman.next_direction))
         {
-        case DIRECTION_RIGHT:
-            x++;
-            break;
-        case DIRECTION_LEFT:
-            x--;
-            break;
-        case DIRECTION_UP:
-            y--;
-            break;
-        case DIRECTION_DOWN:
-            y++;
-            break;
-        default:
-            break;
+            state->pacman.direction = state->pacman.next_direction;
         }
-        x = (int)((x + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH);
-        y = (int)((y + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT);
-        if (state->map[coords_to_map_index (y, x)] != CELL_WALL
-            && state->map[coords_to_map_index (y, x)] != CELL_GHOST_WALL)
+        x = state->pacman.position.x;
+        y = state->pacman.position.y;
+        const auto direction = state->pacman.direction;
+        if (try_move (state, &x, &y, direction))
         {
             state->pacman.position.x = x;
             state->pacman.position.y = y;
@@ -333,7 +323,7 @@ int SDL_AppIterate (void *appstate)
         {
             if (nk_begin (&state->video.nuklear.ctx,
                     "debug",
-                    (struct nk_rect){ 10, 10, 100, 100 },
+                    (struct nk_rect){ 10, 10, 400, 300 },
                     NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE
                         | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE
                         | NK_WINDOW_SCROLL_AUTO_HIDE))
@@ -402,16 +392,16 @@ bool event_key (const SDL_Event *event, state_t *state)
     case SDL_SCANCODE_ESCAPE:
         return true;
     case SDL_SCANCODE_LEFT:
-        state->pacman.direction = DIRECTION_LEFT;
+        state->pacman.next_direction = DIRECTION_LEFT;
         break;
     case SDL_SCANCODE_RIGHT:
-        state->pacman.direction = DIRECTION_RIGHT;
+        state->pacman.next_direction = DIRECTION_RIGHT;
         break;
     case SDL_SCANCODE_UP:
-        state->pacman.direction = DIRECTION_UP;
+        state->pacman.next_direction = DIRECTION_UP;
         break;
     case SDL_SCANCODE_DOWN:
-        state->pacman.direction = DIRECTION_DOWN;
+        state->pacman.next_direction = DIRECTION_DOWN;
         break;
     case SDL_SCANCODE_F:
     {
@@ -785,4 +775,40 @@ static int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
         break;
     }
     return 0;
+}
+
+static bool try_move (
+    const state_t *const state, int *x, int *y, const direction_t direction)
+{
+    auto cx = *x;
+    auto cy = *y;
+    bool res = false;
+    switch (direction)
+    {
+    case DIRECTION_RIGHT:
+        cx++;
+        break;
+    case DIRECTION_LEFT:
+        cx--;
+        break;
+    case DIRECTION_UP:
+        cy--;
+        break;
+    case DIRECTION_DOWN:
+        cy++;
+        break;
+    default:
+        return false;
+        break;
+    }
+    cx = (int)((cx + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH);
+    cy = (int)((cy + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT);
+    if (state->map[coords_to_map_index (cy, cx)] != CELL_WALL
+        && state->map[coords_to_map_index (cy, cx)] != CELL_GHOST_WALL)
+    {
+        *x = cx;
+        *y = cy;
+        res = true;
+    }
+    return res;
 }

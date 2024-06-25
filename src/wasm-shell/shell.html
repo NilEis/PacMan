@@ -12,18 +12,22 @@
     <style>
         body {
             margin: 0px;
+            width: 100vh;
+            height: 100vh;
         }
 
         canvas.emscripten {
             border: 0px none;
             background-color: black;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 
 <body>
     <canvas class=emscripten id=canvas tabindex=-1
-        onclick="document.getElementById('canvas').requestFullscreen()"></canvas>
+        onclick="/*document.getElementById('canvas').requestFullscreen()*/"></canvas>
     <p id="output">
     </p>
     {{{ SCRIPT }}}
