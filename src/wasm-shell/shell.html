@@ -26,20 +26,21 @@
 </head>
 
 <body>
-    <canvas class=emscripten id=canvas tabindex=-1
+<canvas class=emscripten id=canvas tabindex=-1
         onclick="/*document.getElementById('canvas').requestFullscreen()*/"></canvas>
-    <p id="output">
-    </p>
-    {{{ SCRIPT }}}
-    <script async defer>
-        window.onload = () => {
-            PacMan().then((module) => {
-                module.onRuntimeInitialized = () => {
-                    module._main();
-                };
-            });
-        }
-    </script>
+<br/>
+<p id="output">
+</p>
+{{{ SCRIPT }}}
+<script async defer>
+    window.onload = () => {
+        PacMan().then((module) => {
+            module.onRuntimeInitialized = () => {
+                module._main();
+            };
+        });
+    }
+</script>
 </body>
 
 </html>

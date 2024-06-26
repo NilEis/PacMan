@@ -11,15 +11,15 @@
 #include "typedefs.h"
 #define NK_IMPLEMENTATION
 #define NK_PRIVATE
-#define NK_ASSERT(x)                                                          \
-    do                                                                        \
-    {                                                                         \
-        if (!(x))                                                             \
-        {                                                                     \
-            *(int *)0 = 0;                                                    \
-        }                                                                     \
-    }                                                                         \
-    while (0)
+// #define NK_ASSERT(x)                                                          \
+//     do                                                                        \
+//     {                                                                         \
+//         if (!(x))                                                             \
+//         {                                                                     \
+//             *(int *)0 = 0;                                                    \
+//         }                                                                     \
+//     }                                                                         \
+//     while (0)
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_STANDARD_IO
@@ -41,6 +41,11 @@
 #include <string.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define LERP(b, a, t) ((a) * (1.0f - (t)) + ((b) * (t)))
+static double lerp (const double a, const double b, const double t)
+{
+    return b * (1.0f - t) + a * t;
+}
 
 bool event_key (const SDL_Event *event, state_t *state);
 static void resize_event (state_t *state, const int width, const int height);
@@ -65,6 +70,13 @@ static int nk_sdl_handle_event (state_t *state, const SDL_Event *evt);
 static bool try_move (
     const state_t *const state, int *x, int *y, const direction_t direction);
 
+static bool try_move_and_set (const state_t *const state,
+    int x,
+    int y,
+    int *out_x,
+    int *out_y,
+    const direction_t direction);
+
 int SDL_AppInit (void **appstate, int argc, char **argv)
 {
     (void)argc;
@@ -72,6 +84,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     state_t *state = calloc (1, sizeof (state_t));
     state->pacman.position.x = 1;
     state->pacman.position.y = 1;
+    state->pacman.position_interp = 0;
     state->pacman.direction = DIRECTION_LEFT;
     state->pacman.next_direction = DIRECTION_NONE;
     state->pacman.animation = 0;
@@ -79,6 +92,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
 
     trigger_stop (&state->trigger.pacman_animation);
     trigger_stop (&state->trigger.pacman_move);
+    trigger_stop (&state->trigger.pacman_move_between_cells);
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -87,18 +101,27 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         goto error;
     }
     SDL_SetHint ("SDL_RENDER_SCALE_QUALITY", "0");
+    int init_width = WIDTH;
+    int init_height = HEIGHT;
+    const SDL_DisplayMode *dm = SDL_GetDesktopDisplayMode (1);
+    if (dm == nullptr)
+    {
+        SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
+    }
+    init_width = dm->w;
+    init_height = dm->h;
     state->video.sdl.window = SDL_CreateWindow (NAME,
-        WIDTH,
-        HEIGHT,
+        init_width,
+        init_height,
         SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT | SDL_WINDOW_RESIZABLE);
     if (state->video.sdl.window == NULL)
     {
         goto error;
     }
-    resize_event (state, WIDTH, HEIGHT);
     state->video.sdl.bordered = false;
-    state->video.sdl.width = WIDTH;
-    state->video.sdl.width = HEIGHT;
+    state->video.sdl.width = init_width;
+    state->video.sdl.width = init_height;
+    resize_event (state, init_width, init_height);
     SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
     state->video.sdl.renderer
         = SDL_CreateRenderer (state->video.sdl.window, nullptr);
@@ -251,6 +274,9 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
     trigger_start_after (
         state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
+    trigger_start_after (state,
+        &state->trigger.pacman_move_between_cells,
+        PACMAN_MOVE_BETWEEN_CELLS_TICKS);
     return 0;
 
 error:
@@ -265,12 +291,20 @@ int SDL_AppIterate (void *appstate)
     bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     state->delta = delta;
     state->last_ticks = SDL_GetTicks ();
+    state->tick++;
 
     if (trigger_triggered (state, &state->trigger.pacman_animation))
     {
         state->pacman.animation = (state->pacman.animation + 1) % 4;
         trigger_start_after (
             state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
+    }
+    if (trigger_triggered (state, &state->trigger.pacman_move_between_cells))
+    {
+        state->pacman.position_interp++;
+        trigger_start_after (state,
+            &state->trigger.pacman_move_between_cells,
+            PACMAN_MOVE_BETWEEN_CELLS_TICKS);
     }
     if (trigger_triggered (state, &state->trigger.pacman_move))
     {
@@ -288,8 +322,13 @@ int SDL_AppIterate (void *appstate)
             state->pacman.position.x = x;
             state->pacman.position.y = y;
         }
+        else
+        {
+            state->pacman.direction = DIRECTION_NONE;
+        }
         trigger_start_after (
             state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
+        state->pacman.position_interp = 0;
     }
 
     SDL_SetRenderTarget (
@@ -301,15 +340,35 @@ int SDL_AppIterate (void *appstate)
             state->video.sdl.sprites.atlas,
             &state->video.sdl.sprites.map.pos,
             NULL);
-        SDL_RenderTexture (state->video.sdl.renderer,
-            state->video.sdl.sprites.atlas,
-            &state->video.sdl.sprites
-                 .pacman[state->pacman.direction][state->pacman.animation]
-                 .pos,
-            &(SDL_FRect){ (float)state->pacman.position.x * CELL_WIDTH,
-                (float)state->pacman.position.y * CELL_HEIGHT,
-                CELL_WIDTH,
-                CELL_HEIGHT });
+        {
+            int x = state->pacman.position.x;
+            int y = state->pacman.position.y;
+            double x_offset = 0;
+            double y_offset = 0;
+            try_move_and_set (state, x, y, &x, &y, state->pacman.direction);
+            {
+                x_offset = (double)state->pacman.position.x
+                         - lerp (state->pacman.position.x,
+                             x,
+                             (double)state->pacman.position_interp
+                                 / PACMAN_MOVE_TICKS);
+                y_offset = (double)state->pacman.position.y
+                         - lerp (state->pacman.position.y,
+                             y,
+                             (double)state->pacman.position_interp
+                                 / PACMAN_MOVE_TICKS);
+            }
+            SDL_RenderTexture (state->video.sdl.renderer,
+                state->video.sdl.sprites.atlas,
+                &state->video.sdl.sprites
+                     .pacman[state->pacman.direction][state->pacman.animation]
+                     .pos,
+                &(SDL_FRect){
+                    ((float)state->pacman.position.x + x_offset) * CELL_WIDTH,
+                    ((float)state->pacman.position.y + y_offset) * CELL_HEIGHT,
+                    CELL_WIDTH,
+                    CELL_HEIGHT });
+        }
     }
     SDL_SetRenderTarget (state->video.sdl.renderer, NULL);
     {
@@ -462,18 +521,10 @@ static bool test_cell (
                                       * map_surface->format->bytes_per_pixel);
             SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
             const auto i = (int)r << 16 | (int)g << 8 | b;
-            if (x == 1 && y == 1)
-            {
-                printf ("(%u, %u, %u) ", r, g, b);
-            }
             if (b != 0)
             {
                 return true;
             }
-        }
-        if (x == 1 && y == 1)
-        {
-            printf ("\n");
         }
     }
     return false;
@@ -780,8 +831,27 @@ static int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
 static bool try_move (
     const state_t *const state, int *x, int *y, const direction_t direction)
 {
-    auto cx = *x;
-    auto cy = *y;
+    int cx = 0;
+    int cy = 0;
+    bool res = false;
+    if (try_move_and_set (state, *x, *y, &cx, &cy, direction))
+    {
+        *x = cx;
+        *y = cy;
+        res = true;
+    }
+    return res;
+}
+
+static bool try_move_and_set (const state_t *const state,
+    int x,
+    int y,
+    int *out_x,
+    int *out_y,
+    const direction_t direction)
+{
+    auto cx = x;
+    auto cy = y;
     bool res = false;
     switch (direction)
     {
@@ -803,11 +873,11 @@ static bool try_move (
     }
     cx = (int)((cx + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH);
     cy = (int)((cy + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT);
+    *out_x = cx;
+    *out_y = cy;
     if (state->map[coords_to_map_index (cy, cx)] != CELL_WALL
         && state->map[coords_to_map_index (cy, cx)] != CELL_GHOST_WALL)
     {
-        *x = cx;
-        *y = cy;
         res = true;
     }
     return res;

@@ -7,13 +7,13 @@ static constexpr uint32_t TRIGGER_DISABLED = UINT32_MAX;
 
 static void trigger_start (const state_t *state, trigger_t *trigger)
 {
-    trigger->tick = state->last_ticks;
+    trigger->tick = state->tick;
 }
 
 static void trigger_start_after (
     const state_t *state, trigger_t *trigger, const uint32_t ticks)
 {
-    trigger->tick = state->last_ticks + ticks;
+    trigger->tick = state->tick + ticks;
 }
 
 static void trigger_stop (trigger_t *trigger)
@@ -24,21 +24,21 @@ static void trigger_stop (trigger_t *trigger)
 static uint32_t trigger_ticks_since_trigger (
     const state_t *state, const trigger_t *trigger)
 {
-    if (state->last_ticks >= trigger->tick)
+    if (state->tick >= trigger->tick)
     {
-        return state->last_ticks - trigger->tick;
+        return state->tick - trigger->tick;
     }
     return TRIGGER_DISABLED;
 }
 
 static bool trigger_triggered (const state_t *state, const trigger_t *trigger)
 {
-    return state->last_ticks >= trigger->tick;
+    return state->tick >= trigger->tick;
 }
 
 static bool trigger_now (const state_t *state, const trigger_t *trigger)
 {
-    return state->last_ticks == trigger->tick;
+    return state->tick == trigger->tick;
 }
 
 static bool trigger_between (const trigger_t *trigger,

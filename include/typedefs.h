@@ -93,6 +93,7 @@ typedef struct
     struct
     {
         int_vec2_t position;
+        int position_interp;
         direction_t direction;
         direction_t next_direction;
         uint32_t animation;
@@ -103,9 +104,11 @@ typedef struct
     {
         trigger_t pacman_animation;
         trigger_t pacman_move;
+        trigger_t pacman_move_between_cells;
     } trigger;
     uint32_t last_ticks;
     uint32_t delta;
+    uint32_t tick;
 } state_t;
 
 #endif // TYPEDEFS_H
