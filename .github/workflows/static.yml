@@ -43,7 +43,7 @@ jobs:
           #  so make sure it doesn't conflict with anything!
           actions-cache-folder: 'emsdk-cache'
       - name: configure
-        run: emcmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
+        run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
       - name: build
         run: emmake make -C ./build
       - name: Upload artifact
