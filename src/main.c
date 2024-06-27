@@ -126,7 +126,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     resize_event (state, init_width, init_height);
     SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
     state->video.sdl.renderer
-        = SDL_CreateRenderer (state->video.sdl.window, "vulkan");
+        = SDL_CreateRenderer (state->video.sdl.window, nullptr);
     if (state->video.sdl.renderer == nullptr)
     {
         SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
