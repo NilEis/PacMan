@@ -1,3 +1,4 @@
+#include "SDL3/SDL_scancode.h"
 #include "maps.h"
 #define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_init.h"
@@ -93,6 +94,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     trigger_stop (&state->trigger.pacman_animation);
     trigger_stop (&state->trigger.pacman_move);
     trigger_stop (&state->trigger.pacman_move_between_cells);
+    trigger_stop (&state->trigger.pacman_die);
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -124,7 +126,11 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     resize_event (state, init_width, init_height);
     SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
     state->video.sdl.renderer
-        = SDL_CreateRenderer (state->video.sdl.window, nullptr);
+        = SDL_CreateRenderer (state->video.sdl.window, "vulkan");
+    if (state->video.sdl.renderer == nullptr)
+    {
+        SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
+    }
     printf ("driver:\n");
     for (auto i = 0; i < SDL_GetNumRenderDrivers (); i++)
     {
@@ -161,6 +167,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
             = state->video.sdl.sprites.pacman[DIRECTION_NONE][1].pos
             = state->video.sdl.sprites.pacman[DIRECTION_NONE][2].pos
             = state->video.sdl.sprites.pacman[DIRECTION_NONE][3].pos
+            = state->video.sdl.sprites.pacman_die[0].pos
             = (SDL_FRect){ .x = 488.f, .y = 0.f, .w = 15.f, .h = 15.f };
 
         state->video.sdl.sprites.pacman[DIRECTION_RIGHT][0].pos
@@ -190,6 +197,27 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
             = (SDL_FRect){ .x = 472.f, .y = 48.f, .w = 15.f, .h = 15.f };
         state->video.sdl.sprites.pacman[DIRECTION_DOWN][3].pos
             = (SDL_FRect){ .x = 472.f, .y = 48.f, .w = 15.f, .h = 15.f };
+    }
+
+    for (auto i = 0; i < sizeof (state->video.sdl.sprites.pacman_die)
+                             / sizeof (state->video.sdl.sprites.pacman_die[0]);
+         i++)
+    {
+        if (i
+            == sizeof (state->video.sdl.sprites.pacman_die)
+                       / sizeof (state->video.sdl.sprites.pacman_die[0])
+                   - 1)
+        {
+            state->video.sdl.sprites.pacman_die[i].pos = (SDL_FRect){
+                .x = 488.f + 16.0f * i, .y = 0.f + 16.0f, .w = 15.f, .h = 15.f
+            };
+        }
+        else
+        {
+            state->video.sdl.sprites.pacman_die[i].pos = (SDL_FRect){
+                .x = 488.f + 16.0f * i, .y = 0.f, .w = 15.f, .h = 15.f
+            };
+        }
     }
 
     {
@@ -330,6 +358,30 @@ int SDL_AppIterate (void *appstate)
             state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
         state->pacman.position_interp = 0;
     }
+    if (trigger_triggered (state, &state->trigger.pacman_die))
+    {
+        trigger_stop (&state->trigger.pacman_animation);
+        trigger_stop (&state->trigger.pacman_move);
+        trigger_stop (&state->trigger.pacman_move_between_cells);
+        if (!state->pacman.dead)
+        {
+            state->pacman.dead = true;
+            state->pacman.animation = 0;
+        }
+        else
+        {
+            constexpr auto PACMAN_DEAD_END_FRAME
+                = sizeof (state->video.sdl.sprites.pacman_die)
+                    / sizeof (state->video.sdl.sprites.pacman_die[0])
+                - 1;
+            state->pacman.animation
+                = state->pacman.animation == PACMAN_DEAD_END_FRAME
+                    ? PACMAN_DEAD_END_FRAME
+                    : state->pacman.animation + 1;
+        }
+        trigger_start_after (
+            state, &state->trigger.pacman_die, PACMAN_ANIMATION_TICKS);
+    }
 
     SDL_SetRenderTarget (
         state->video.sdl.renderer, state->video.sdl.framebuffer_texture);
@@ -360,9 +412,14 @@ int SDL_AppIterate (void *appstate)
             }
             SDL_RenderTexture (state->video.sdl.renderer,
                 state->video.sdl.sprites.atlas,
-                &state->video.sdl.sprites
-                     .pacman[state->pacman.direction][state->pacman.animation]
-                     .pos,
+                state->pacman.dead
+                    ? (&state->video.sdl.sprites
+                              .pacman_die[state->pacman.animation]
+                              .pos)
+                    : (&state->video.sdl.sprites
+                              .pacman[state->pacman.direction]
+                                     [state->pacman.animation]
+                              .pos),
                 &(SDL_FRect){
                     ((float)state->pacman.position.x + x_offset) * CELL_WIDTH,
                     ((float)state->pacman.position.y + y_offset) * CELL_HEIGHT,
@@ -461,6 +518,9 @@ bool event_key (const SDL_Event *event, state_t *state)
         break;
     case SDL_SCANCODE_DOWN:
         state->pacman.next_direction = DIRECTION_DOWN;
+        break;
+    case SDL_SCANCODE_K:
+        trigger_start_after (state, &state->trigger.pacman_die, 1);
         break;
     case SDL_SCANCODE_F:
     {

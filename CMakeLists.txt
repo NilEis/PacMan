@@ -9,6 +9,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
 set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
 

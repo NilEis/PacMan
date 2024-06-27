@@ -76,6 +76,7 @@ typedef struct
                 atlas_entry_t map_filled;
                 atlas_entry_t map;
                 atlas_entry_t pacman[5][4];
+                atlas_entry_t pacman_die[13];
             } sprites;
             int width;
             int height;
@@ -97,6 +98,7 @@ typedef struct
         direction_t direction;
         direction_t next_direction;
         uint32_t animation;
+        bool dead;
     } pacman;
     cell_type_t map[(int)GRID_HEIGHT * (int)GRID_WIDTH];
     bool running;
@@ -105,6 +107,7 @@ typedef struct
         trigger_t pacman_animation;
         trigger_t pacman_move;
         trigger_t pacman_move_between_cells;
+        trigger_t pacman_die;
     } trigger;
     uint32_t last_ticks;
     uint32_t delta;
