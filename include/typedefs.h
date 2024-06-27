@@ -60,6 +60,38 @@ typedef struct
     nk_byte col[4];
 } nk_sdl_vertex_t;
 
+typedef enum : uint8_t
+{
+    BLINKY = 0,
+    PINKY = 1,
+    INKY = 2,
+    CLYDE = 3
+} ghost_name_t;
+
+typedef struct
+{
+    int_vec2_t pos;
+    int position_interp;
+    int_vec2_t corner;
+    direction_t dir;
+    struct
+    {
+        struct
+        {
+            trigger_t trigger;
+            uint32_t ticks;
+        } start;
+        struct
+        {
+            trigger_t trigger;
+            uint32_t ticks;
+        } move;
+        trigger_t chase;
+        trigger_t scatter;
+    } trigger;
+    SDL_FRect sprite[4][2];
+} ghost_t;
+
 typedef struct
 {
     struct
@@ -93,6 +125,13 @@ typedef struct
     } video;
     struct
     {
+        struct
+        {
+            trigger_t pacman_animation;
+            trigger_t pacman_move;
+            trigger_t pacman_move_between_cells;
+            trigger_t pacman_die;
+        } trigger;
         int_vec2_t position;
         int position_interp;
         direction_t direction;
@@ -100,15 +139,17 @@ typedef struct
         uint32_t animation;
         bool dead;
     } pacman;
-    cell_type_t map[(int)GRID_HEIGHT * (int)GRID_WIDTH];
-    bool running;
     struct
     {
-        trigger_t pacman_animation;
-        trigger_t pacman_move;
-        trigger_t pacman_move_between_cells;
-        trigger_t pacman_die;
-    } trigger;
+        ghost_t ghost[4];
+        struct
+        {
+            trigger_t trigger;
+            uint32_t value;
+        } animation;
+    } ghosts;
+    cell_type_t map[(int)GRID_HEIGHT * (int)GRID_WIDTH];
+    bool running;
     uint32_t last_ticks;
     uint32_t delta;
     uint32_t tick;

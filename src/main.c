@@ -77,24 +77,95 @@ static bool try_move_and_set (const state_t *const state,
     int *out_x,
     int *out_y,
     const direction_t direction);
+static void parse_map (state_t *state, bool load_atlas)
+{
+    SDL_IOStream *file = SDL_IOFromConstMem (
+        asset_general_sprites_png, asset_general_sprites_png_size);
+    SDL_Surface *full_asset_image = IMG_LoadTyped_IO (file, SDL_TRUE, "PNG");
+    if (load_atlas)
+        state->video.sdl.sprites.atlas = SDL_CreateTextureFromSurface (
+            state->video.sdl.renderer, full_asset_image);
+    SDL_Surface *map_surface
+        = SDL_CreateSurface ((int)state->video.sdl.sprites.map.pos.w,
+            (int)state->video.sdl.sprites.map.pos.h,
+            SDL_PIXELFORMAT_RGBA32);
+    const auto res = SDL_BlitSurface (full_asset_image,
+        &(SDL_Rect){ (int)state->video.sdl.sprites.map.pos.x,
+            (int)state->video.sdl.sprites.map.pos.y,
+            (int)state->video.sdl.sprites.map.pos.w,
+            (int)state->video.sdl.sprites.map.pos.h },
+        map_surface,
+        NULL);
+    if (res != 0)
+    {
+        printf ("%d: %s\n", res, SDL_GetError ());
+    }
+    for (auto y = 0; y < GRID_HEIGHT; y++)
+    {
+        for (auto x = 0; x < GRID_WIDTH; x++)
+        {
+            if (test_cell (map_surface, y, x))
+            {
+                state->map[coords_to_map_index (y, x)] = CELL_WALL;
+            }
+        }
+    }
+    SDL_DestroySurface (full_asset_image);
+    SDL_DestroySurface (map_surface);
+}
+
+static void init_state (state_t *state,
+    const int init_width,
+    const int init_height,
+    const bool load_atlas)
+{
+    state->pacman.position.x = 1;
+    state->pacman.position.y = 1;
+    state->pacman.position_interp = 0;
+    state->pacman.dead = false;
+    state->pacman.direction = DIRECTION_LEFT;
+    state->pacman.next_direction = DIRECTION_NONE;
+    state->pacman.animation = 0;
+    memcpy (state->map, map1, sizeof (state->map));
+    parse_map (state, load_atlas);
+
+    trigger_stop (&state->pacman.trigger.pacman_animation);
+    trigger_stop (&state->pacman.trigger.pacman_move);
+    trigger_stop (&state->pacman.trigger.pacman_move_between_cells);
+    trigger_stop (&state->pacman.trigger.pacman_die);
+
+    trigger_stop (&state->ghosts.animation.trigger);
+
+    for (auto i = 0; i < 4; i++)
+    {
+        state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 13 + i, .y = 14 };
+    }
+
+    state->video.sdl.bordered = false;
+    state->video.sdl.width = init_width;
+    state->video.sdl.width = init_height;
+    resize_event (state, init_width, init_height);
+
+    state->running = true;
+    state->last_ticks = SDL_GetTicks ();
+    trigger_start_after (state,
+        &state->pacman.trigger.pacman_animation,
+        PACMAN_ANIMATION_TICKS);
+    trigger_start_after (
+        state, &state->pacman.trigger.pacman_move, PACMAN_MOVE_TICKS);
+    trigger_start_after (state,
+        &state->pacman.trigger.pacman_move_between_cells,
+        PACMAN_MOVE_BETWEEN_CELLS_TICKS);
+
+    trigger_start_after (
+        state, &state->ghosts.animation.trigger, GHOST_ANIMATION_TICKS);
+}
 
 int SDL_AppInit (void **appstate, int argc, char **argv)
 {
     (void)argc;
     (void)argv;
     state_t *state = calloc (1, sizeof (state_t));
-    state->pacman.position.x = 1;
-    state->pacman.position.y = 1;
-    state->pacman.position_interp = 0;
-    state->pacman.direction = DIRECTION_LEFT;
-    state->pacman.next_direction = DIRECTION_NONE;
-    state->pacman.animation = 0;
-    memcpy (state->map, map1, sizeof (state->map));
-
-    trigger_stop (&state->trigger.pacman_animation);
-    trigger_stop (&state->trigger.pacman_move);
-    trigger_stop (&state->trigger.pacman_move_between_cells);
-    trigger_stop (&state->trigger.pacman_die);
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -103,15 +174,13 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         goto error;
     }
     SDL_SetHint ("SDL_RENDER_SCALE_QUALITY", "0");
-    int init_width = WIDTH;
-    int init_height = HEIGHT;
     const SDL_DisplayMode *dm = SDL_GetDesktopDisplayMode (1);
     if (dm == nullptr)
     {
         SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
     }
-    init_width = dm->w;
-    init_height = dm->h;
+    const int init_width = dm ? dm->w : WIDTH;
+    const int init_height = dm ? dm->h : HEIGHT;
     state->video.sdl.window = SDL_CreateWindow (NAME,
         init_width,
         init_height,
@@ -120,16 +189,14 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
     {
         goto error;
     }
-    state->video.sdl.bordered = false;
-    state->video.sdl.width = init_width;
-    state->video.sdl.width = init_height;
-    resize_event (state, init_width, init_height);
+
     SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
     state->video.sdl.renderer
         = SDL_CreateRenderer (state->video.sdl.window, nullptr);
     if (state->video.sdl.renderer == nullptr)
     {
         SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
+        goto error;
     }
     printf ("driver:\n");
     for (auto i = 0; i < SDL_GetNumRenderDrivers (); i++)
@@ -199,6 +266,21 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
             = (SDL_FRect){ .x = 472.f, .y = 48.f, .w = 15.f, .h = 15.f };
     }
 
+    for (auto i = 0; i < 4; i++)
+    {
+        for (auto dir = 0; dir < 4; dir++)
+        {
+            for (auto j = 0; j < 2; j++)
+            {
+                state->ghosts.ghost[i].sprite[dir][j]
+                    = (SDL_FRect){ .x = 456 + j * 16 + dir * 32,
+                          .y = 64 + i * 16,
+                          .w = 16,
+                          .h = 16 };
+            }
+        }
+    }
+
     for (auto i = 0; i < sizeof (state->video.sdl.sprites.pacman_die)
                              / sizeof (state->video.sdl.sprites.pacman_die[0]);
          i++)
@@ -218,42 +300,6 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
                 .x = 488.f + 16.0f * i, .y = 0.f, .w = 15.f, .h = 15.f
             };
         }
-    }
-
-    {
-        SDL_IOStream *file = SDL_IOFromConstMem (
-            asset_general_sprites_png, asset_general_sprites_png_size);
-        SDL_Surface *full_asset_image
-            = IMG_LoadTyped_IO (file, SDL_TRUE, "PNG");
-        state->video.sdl.sprites.atlas = SDL_CreateTextureFromSurface (
-            state->video.sdl.renderer, full_asset_image);
-        SDL_Surface *map_surface
-            = SDL_CreateSurface ((int)state->video.sdl.sprites.map.pos.w,
-                (int)state->video.sdl.sprites.map.pos.h,
-                SDL_PIXELFORMAT_RGBA32);
-        const auto res = SDL_BlitSurface (full_asset_image,
-            &(SDL_Rect){ (int)state->video.sdl.sprites.map.pos.x,
-                (int)state->video.sdl.sprites.map.pos.y,
-                (int)state->video.sdl.sprites.map.pos.w,
-                (int)state->video.sdl.sprites.map.pos.h },
-            map_surface,
-            NULL);
-        if (res != 0)
-        {
-            printf ("%d: %s\n", res, SDL_GetError ());
-        }
-        for (auto y = 0; y < GRID_HEIGHT; y++)
-        {
-            for (auto x = 0; x < GRID_WIDTH; x++)
-            {
-                if (test_cell (map_surface, y, x))
-                {
-                    state->map[coords_to_map_index (y, x)] = CELL_WALL;
-                }
-            }
-        }
-        SDL_DestroySurface (full_asset_image);
-        SDL_DestroySurface (map_surface);
     }
 
     {
@@ -295,19 +341,10 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         state->video.nuklear.ctx.clip.userdata = nk_handle_ptr (nullptr);
         nk_buffer_init_default (&state->video.nuklear.cmds);
     }
-
-    state->running = true;
-    state->last_ticks = SDL_GetTicks ();
-    trigger_start_after (
-        state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
-    trigger_start_after (
-        state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
-    trigger_start_after (state,
-        &state->trigger.pacman_move_between_cells,
-        PACMAN_MOVE_BETWEEN_CELLS_TICKS);
+    init_state (state, init_width, init_height, true);
     return 0;
 
-error:
+    error:
     return -1;
 }
 
@@ -321,20 +358,29 @@ int SDL_AppIterate (void *appstate)
     state->last_ticks = SDL_GetTicks ();
     state->tick++;
 
-    if (trigger_triggered (state, &state->trigger.pacman_animation))
+    if (trigger_triggered (state, &state->pacman.trigger.pacman_animation))
     {
         state->pacman.animation = (state->pacman.animation + 1) % 4;
-        trigger_start_after (
-            state, &state->trigger.pacman_animation, PACMAN_ANIMATION_TICKS);
+        trigger_start_after (state,
+            &state->pacman.trigger.pacman_animation,
+            PACMAN_ANIMATION_TICKS);
     }
-    if (trigger_triggered (state, &state->trigger.pacman_move_between_cells))
+    if (trigger_triggered (state, &state->ghosts.animation.trigger))
+    {
+        state->ghosts.animation.value
+            = (state->ghosts.animation.value + 1) % 2;
+        trigger_start_after (
+            state, &state->ghosts.animation.trigger, GHOST_ANIMATION_TICKS);
+    }
+    if (trigger_triggered (
+            state, &state->pacman.trigger.pacman_move_between_cells))
     {
         state->pacman.position_interp++;
         trigger_start_after (state,
-            &state->trigger.pacman_move_between_cells,
+            &state->pacman.trigger.pacman_move_between_cells,
             PACMAN_MOVE_BETWEEN_CELLS_TICKS);
     }
-    if (trigger_triggered (state, &state->trigger.pacman_move))
+    if (trigger_triggered (state, &state->pacman.trigger.pacman_move))
     {
         auto x = state->pacman.position.x;
         auto y = state->pacman.position.y;
@@ -355,14 +401,14 @@ int SDL_AppIterate (void *appstate)
             state->pacman.direction = DIRECTION_NONE;
         }
         trigger_start_after (
-            state, &state->trigger.pacman_move, PACMAN_MOVE_TICKS);
+            state, &state->pacman.trigger.pacman_move, PACMAN_MOVE_TICKS);
         state->pacman.position_interp = 0;
     }
-    if (trigger_triggered (state, &state->trigger.pacman_die))
+    if (trigger_triggered (state, &state->pacman.trigger.pacman_die))
     {
-        trigger_stop (&state->trigger.pacman_animation);
-        trigger_stop (&state->trigger.pacman_move);
-        trigger_stop (&state->trigger.pacman_move_between_cells);
+        trigger_stop (&state->pacman.trigger.pacman_animation);
+        trigger_stop (&state->pacman.trigger.pacman_move);
+        trigger_stop (&state->pacman.trigger.pacman_move_between_cells);
         if (!state->pacman.dead)
         {
             state->pacman.dead = true;
@@ -380,7 +426,7 @@ int SDL_AppIterate (void *appstate)
                     : state->pacman.animation + 1;
         }
         trigger_start_after (
-            state, &state->trigger.pacman_die, PACMAN_ANIMATION_TICKS);
+            state, &state->pacman.trigger.pacman_die, PACMAN_ANIMATION_TICKS);
     }
 
     SDL_SetRenderTarget (
@@ -410,6 +456,7 @@ int SDL_AppIterate (void *appstate)
                              (double)state->pacman.position_interp
                                  / PACMAN_MOVE_TICKS);
             }
+
             SDL_RenderTexture (state->video.sdl.renderer,
                 state->video.sdl.sprites.atlas,
                 state->pacman.dead
@@ -423,6 +470,37 @@ int SDL_AppIterate (void *appstate)
                 &(SDL_FRect){
                     ((float)state->pacman.position.x + x_offset) * CELL_WIDTH,
                     ((float)state->pacman.position.y + y_offset) * CELL_HEIGHT,
+                    CELL_WIDTH,
+                    CELL_HEIGHT });
+        }
+        for (auto i = 0; i < 4; i++)
+        {
+            int x = state->ghosts.ghost[i].pos.x;
+            int y = state->ghosts.ghost[i].pos.y;
+            double x_offset = 0;
+            double y_offset = 0;
+            try_move_and_set (state, x, y, &x, &y, state->ghosts.ghost[i].dir);
+            {
+                x_offset = (double)state->ghosts.ghost[i].pos.x
+                         - lerp (state->ghosts.ghost[i].pos.x,
+                             x,
+                             (double)state->ghosts.ghost[i].position_interp
+                                 / GHOST_MOVE_TICKS);
+                y_offset = (double)state->ghosts.ghost[i].pos.y
+                         - lerp (state->ghosts.ghost[i].pos.y,
+                             y,
+                             (double)state->ghosts.ghost[i].position_interp
+                                 / GHOST_MOVE_TICKS);
+            }
+
+            SDL_RenderTexture (state->video.sdl.renderer,
+                state->video.sdl.sprites.atlas,
+                &state->ghosts.ghost[i]
+                     .sprite[state->ghosts.ghost[i].dir][state->ghosts.animation.value],
+                &(SDL_FRect){ ((float)state->ghosts.ghost[i].pos.x + x_offset)
+                                  * CELL_WIDTH,
+                    ((float)state->ghosts.ghost[i].pos.y + y_offset)
+                        * CELL_HEIGHT,
                     CELL_WIDTH,
                     CELL_HEIGHT });
         }
@@ -520,7 +598,7 @@ bool event_key (const SDL_Event *event, state_t *state)
         state->pacman.next_direction = DIRECTION_DOWN;
         break;
     case SDL_SCANCODE_K:
-        trigger_start_after (state, &state->trigger.pacman_die, 1);
+        trigger_start_after (state, &state->pacman.trigger.pacman_die, 1);
         break;
     case SDL_SCANCODE_F:
     {
@@ -528,6 +606,10 @@ bool event_key (const SDL_Event *event, state_t *state)
         printf ("fps: %u\n", fps);
     }
     break;
+    case SDL_SCANCODE_R:
+        init_state (
+            state, state->video.sdl.width, state->video.sdl.height, false);
+        break;
     case SDL_SCANCODE_H:
         state->video.sdl.bordered = !state->video.sdl.bordered;
         SDL_SetWindowBordered (
