@@ -62,17 +62,26 @@ typedef struct
 
 typedef enum : uint8_t
 {
-    BLINKY = 0,
-    PINKY = 1,
-    INKY = 2,
-    CLYDE = 3
+    GHOST_BLINKY = 0,
+    GHOST_PINKY = 1,
+    GHOST_INKY = 2,
+    GHOST_CLYDE = 3,
+    GHOST_MAX
 } ghost_name_t;
+
+typedef struct
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} rgb_t;
 
 typedef struct
 {
     int_vec2_t pos;
     int position_interp;
     int_vec2_t corner;
+    int_vec2_t target;
     direction_t dir;
     struct
     {
@@ -86,10 +95,12 @@ typedef struct
             trigger_t trigger;
             uint32_t ticks;
         } move;
+        trigger_t move_between;
         trigger_t chase;
         trigger_t scatter;
     } trigger;
     SDL_FRect sprite[4][2];
+    rgb_t color;
 } ghost_t;
 
 typedef struct

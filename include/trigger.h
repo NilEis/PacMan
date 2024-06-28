@@ -55,7 +55,7 @@ static bool trigger_between (const trigger_t *trigger,
 }
 
 static bool trigger_after (
-    const trigger_t *trigger, const state_t *state, const uint32_t ticks)
+    const state_t *state, const trigger_t *trigger, const uint32_t ticks)
 {
     return trigger->tick != TRIGGER_DISABLED
         && ticks <= trigger_ticks_since_trigger (state, trigger);

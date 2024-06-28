@@ -14,13 +14,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
 
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
-${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
-${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
-${CMAKE_CURRENT_SOURCE_DIR}/include/maps.h
-${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/maps.h
+        ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/nk_util_functions.h)
 
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/maps.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/nk_util_functions.c
         ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${HEADERS})
 
 if (EMSCRIPTEN)
