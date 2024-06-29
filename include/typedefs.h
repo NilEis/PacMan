@@ -1,14 +1,8 @@
 #ifndef TYPEDEFS_H
 #define TYPEDEFS_H
 #include "SDL3/SDL_render.h"
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_STANDARD_BOOL
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#include "defines.h"
+#include "nuklear_default.h"
 #include "nuklear.h"
 
 #include <stdint.h>
@@ -161,9 +155,15 @@ typedef struct
     } ghosts;
     cell_type_t map[(int)GRID_HEIGHT * (int)GRID_WIDTH];
     bool running;
-    uint32_t last_ticks;
+    uint64_t last_ticks;
     uint32_t delta;
     uint32_t tick;
+    struct
+    {
+        bool draw_targets;
+        bool draw_ghost_cell;
+        bool draw_pacman_cell;
+    } options;
 } state_t;
 
 #endif // TYPEDEFS_H

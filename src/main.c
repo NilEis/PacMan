@@ -21,6 +21,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+
+#define add_bool_option(name)                                                 \
+    do                                                                        \
+    {                                                                         \
+        state->options.name = nk_checkbox_label (                             \
+            &state->video.nuklear.ctx, #name, &state->options.name);          \
+    }                                                                         \
+    while (0)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 static double lerp (const double a, const double b, const double t)
@@ -144,6 +153,8 @@ static void init_state (state_t *state,
         state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 13 + i, .y = 12 };
         state->ghosts.ghost[i].position_interp = 0;
         state->ghosts.ghost[i].trigger.move.ticks = GHOST_MOVE_TICKS;
+        trigger_stop (&state->ghosts.ghost[i].trigger.move.trigger);
+        trigger_stop (&state->ghosts.ghost[i].trigger.move_between);
     }
 
     state->ghosts.ghost[GHOST_BLINKY].color
@@ -176,10 +187,10 @@ static void init_state (state_t *state,
 
     for (auto i = 0; i < 4; i++)
     {
-        trigger_after (state,
+        trigger_start_after (state,
             &state->ghosts.ghost[i].trigger.move.trigger,
             state->ghosts.ghost[i].trigger.move.ticks);
-        trigger_after (state,
+        trigger_start_after (state,
             &state->ghosts.ghost[i].trigger.move_between,
             GHOST_MOVE_BETWEEN_CELLS_TICKS);
     }
@@ -222,6 +233,8 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
         goto error;
     }
+    SDL_SetRenderDrawBlendMode (
+        state->video.sdl.renderer, SDL_BLENDMODE_BLEND);
     printf ("driver:\n");
     for (auto i = 0; i < SDL_GetNumRenderDrivers (); i++)
     {
@@ -387,10 +400,6 @@ int SDL_AppIterate (void *appstate)
             = direction_to_vec (state->pacman.direction, true);
         for (auto i = 0; i < 4; i++)
         {
-            if (dist_squared (&state->ghosts.ghost[i].pos, &state->pacman.position) <= 2)
-            {
-                trigger_start_after (state, &state->pacman.trigger.pacman_die,1);
-            }
             switch (i)
             {
             case GHOST_BLINKY:
@@ -495,6 +504,12 @@ int SDL_AppIterate (void *appstate)
                 trigger_start_after (state,
                     &state->ghosts.ghost[i].trigger.move.trigger,
                     state->ghosts.ghost[i].trigger.move.ticks);
+            }
+            if (state->ghosts.ghost[i].pos.x == state->pacman.position.x
+                && state->ghosts.ghost[i].pos.y == state->pacman.position.y)
+            {
+                trigger_start_after (
+                    state, &state->pacman.trigger.pacman_die, 0);
             }
         }
     }
@@ -620,6 +635,7 @@ int SDL_AppIterate (void *appstate)
                     CELL_WIDTH,
                     CELL_HEIGHT });
         }
+
         for (auto i = 0; i < 4; i++)
         {
             int x = state->ghosts.ghost[i].pos.x;
@@ -650,13 +666,32 @@ int SDL_AppIterate (void *appstate)
                         * CELL_HEIGHT,
                     CELL_WIDTH,
                     CELL_HEIGHT });
-            if (false)
+        }
+        if (state->options.draw_pacman_cell)
+        {
+            SDL_SetRenderDrawColor (
+                state->video.sdl.renderer, 255, 255, 255, 125);
+            SDL_RenderFillRect (state->video.sdl.renderer,
+                &(SDL_FRect){ .x = state->pacman.position.x * CELL_WIDTH,
+                    .y = state->pacman.position.y * CELL_HEIGHT,
+                    .w = CELL_WIDTH,
+                    .h = CELL_HEIGHT });
+        }
+        if (state->options.draw_targets)
+        {
+            for (auto i = 0; i < 4; i++)
             {
                 SDL_SetRenderDrawColor (state->video.sdl.renderer,
                     state->ghosts.ghost[i].color.r,
                     state->ghosts.ghost[i].color.g,
                     state->ghosts.ghost[i].color.b,
-                    255);
+                    125);
+                SDL_RenderFillRect (state->video.sdl.renderer,
+                    &(SDL_FRect){
+                        .x = state->ghosts.ghost[i].pos.x * CELL_WIDTH,
+                        .y = state->ghosts.ghost[i].pos.y * CELL_HEIGHT,
+                        .w = CELL_WIDTH,
+                        .h = CELL_HEIGHT });
                 SDL_RenderLines (state->video.sdl.renderer,
                     (SDL_FPoint[]){
                         (SDL_FPoint){ state->ghosts.ghost[i].pos.x * CELL_WIDTH
@@ -674,6 +709,17 @@ int SDL_AppIterate (void *appstate)
                                 + CELL_HEIGHT / 2 }
                 },
                     3);
+            }
+        }
+        if (state->options.draw_targets)
+        {
+            for (auto i = 0; i < 4; i++)
+            {
+                SDL_SetRenderDrawColor (state->video.sdl.renderer,
+                    state->ghosts.ghost[i].color.r,
+                    state->ghosts.ghost[i].color.g,
+                    state->ghosts.ghost[i].color.b,
+                    125);
                 SDL_RenderFillRect (state->video.sdl.renderer,
                     &(SDL_FRect){
                         .x = state->ghosts.ghost[i].target.x * CELL_WIDTH,
@@ -700,13 +746,17 @@ int SDL_AppIterate (void *appstate)
                         | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE
                         | NK_WINDOW_SCROLL_AUTO_HIDE))
             {
+                nk_layout_row_dynamic (&state->video.nuklear.ctx, 30, 1);
+                add_bool_option (draw_targets);
+                add_bool_option (draw_ghost_cell);
+                add_bool_option (draw_pacman_cell);
             }
             nk_end (&state->video.nuklear.ctx);
             nk_render (state, NK_ANTI_ALIASING_ON);
         }
     }
     SDL_RenderPresent (state->video.sdl.renderer);
-    while (SDL_GetTicks () - state->last_ticks < TICK_SPEED)
+    while (SDL_GetTicks () - state->last_ticks < MS_PER_FRAME)
     {
     }
     return SDL_APP_CONTINUE;

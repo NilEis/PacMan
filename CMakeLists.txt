@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19) # Set the minimum required CMake version
+cmake_minimum_required(VERSION 3.21) # Set the minimum required CMake version
 project(pacman C)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
@@ -9,7 +9,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
 set(CMAKE_C_STANDARD 23)
-set(CMAKE_C_STANDARD_REQUIRED ON)
 
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
 
@@ -23,7 +22,8 @@ set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/maps.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/nk_util_functions.c
-        ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${HEADERS})
+        ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${HEADERS}
+        include/nuklear_default.h)
 
 if (EMSCRIPTEN)
     set(SUPPORT_CLANGD
@@ -65,10 +65,12 @@ if (EMSCRIPTEN)
 endif ()
 
 FetchContent_Declare(sdl
+        GIT_SHALLOW TRUE
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
         GIT_TAG origin/main)
 
 FetchContent_Declare(sdl_image
+        GIT_SHALLOW TRUE
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
         GIT_TAG origin/main)
 

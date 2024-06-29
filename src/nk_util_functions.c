@@ -1,23 +1,65 @@
 #define NK_IMPLEMENTATION
 #define NK_PRIVATE
-// #define NK_ASSERT(x)                                                          \
-//     do                                                                        \
-//     {                                                                         \
-//         if (!(x))                                                             \
-//         {                                                                     \
-//             *(int *)0 = 0;                                                    \
-//         }                                                                     \
-//     }                                                                         \
-//     while (0)
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_STANDARD_BOOL
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#include "nuklear_default.h"
 #include "nuklear.h"
+
+static int SDL_RenderGeometryRaw8BitColor (SDL_Renderer *renderer,
+    SDL_Texture *texture,
+    const float *xy,
+    int xy_stride,
+    const SDL_Color *color,
+    int color_stride,
+    const float *uv,
+    int uv_stride,
+    int num_vertices,
+    const void *indices,
+    int num_indices,
+    int size_indices)
+{
+    int i, retval;
+    const Uint8 *color2 = (const Uint8 *)color;
+    SDL_FColor *color3;
+
+    if (num_vertices <= 0)
+    {
+        return SDL_InvalidParamError ("num_vertices");
+    }
+    if (!color)
+    {
+        return SDL_InvalidParamError ("color");
+    }
+
+    color3 = calloc (num_vertices, sizeof (SDL_FColor));
+    if (!color3)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < num_vertices; ++i)
+    {
+        color3[i].r = color->r / 255.0f;
+        color3[i].g = color->g / 255.0f;
+        color3[i].b = color->b / 255.0f;
+        color3[i].a = color->a / 255.0f;
+        color2 += color_stride;
+        color = (const SDL_Color *)color2;
+    }
+
+    retval = SDL_RenderGeometryRaw (renderer,
+        texture,
+        xy,
+        xy_stride,
+        color3,
+        sizeof (*color3),
+        uv,
+        uv_stride,
+        num_vertices,
+        indices,
+        num_indices,
+        size_indices);
+    free (color3);
+    return retval;
+}
 
 void nk_render (state_t *state, const enum nk_anti_aliasing AA)
 {
@@ -85,7 +127,7 @@ void nk_render (state_t *state, const enum nk_anti_aliasing AA)
 
         const void *vertices = nk_buffer_memory_const (&vbuf);
 
-        SDL_RenderGeometryRaw (state->video.sdl.renderer,
+        SDL_RenderGeometryRaw8BitColor (state->video.sdl.renderer,
             cmd->texture.ptr,
             (const float *)((const nk_byte *)vertices + vp),
             vs,
