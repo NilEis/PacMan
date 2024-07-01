@@ -165,7 +165,7 @@ void nk_sdl_clipboard_paste (const nk_handle usr, struct nk_text_edit *edit)
 void nk_sdl_clipboard_copy (
     const nk_handle usr, const char *text, const int len)
 {
-    char *str = nullptr;
+    char *str;
     (void)usr;
     if (!len)
         return;
@@ -305,13 +305,15 @@ int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
         [[fallthrough]];
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     {
-        const int down = evt->type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+        const nk_bool down = evt->type == SDL_EVENT_MOUSE_BUTTON_DOWN;
         const int x = evt->button.x, y = evt->button.y;
         switch (evt->button.button)
         {
         case SDL_BUTTON_LEFT:
             if (evt->button.clicks > 1)
+            {
                 nk_input_button (ctx, NK_BUTTON_DOUBLE, x, y, down);
+            }
             nk_input_button (ctx, NK_BUTTON_LEFT, x, y, down);
             break;
         case SDL_BUTTON_MIDDLE:

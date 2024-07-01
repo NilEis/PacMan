@@ -8,8 +8,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
-set(CMAKE_C_STANDARD 23)
-
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
 
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
@@ -97,6 +95,8 @@ target_include_directories(
 file(GLOB SDL_HEADER ${sdl_SOURCE_DIR}/include/SDL3/*.h)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
 option(SUPPORT_CLANGD "Support clangd" ON)
 if (SUPPORT_CLANGD)

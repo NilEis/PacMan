@@ -7,12 +7,12 @@
 
 #include <SDL3/SDL_clipboard.h>
 
-void nk_render (state_t *state, const enum nk_anti_aliasing AA);
+void nk_render (state_t *state, enum nk_anti_aliasing AA);
 
-void nk_sdl_clipboard_paste (const nk_handle usr, struct nk_text_edit *edit);
+void nk_sdl_clipboard_paste (nk_handle usr, struct nk_text_edit *edit);
 
 void nk_sdl_clipboard_copy (
-    const nk_handle usr, const char *text, const int len);
+    nk_handle usr, const char *text, int len);
 
 void nk_sdl_handle_grab (state_t *state);
 

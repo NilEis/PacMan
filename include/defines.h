@@ -1,13 +1,8 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-#define TICK_SPEED 16 /* in ms */
-
 #define TILE_WIDTH (8)
 #define TILE_HEIGHT (8)
-
-#define SPRITE_WIDTH (16)
-#define SPRITE_HEIGHT (16)
 
 #define GRID_WIDTH (28.0)
 #define GRID_HEIGHT (31.0)

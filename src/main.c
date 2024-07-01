@@ -17,19 +17,14 @@
 #include <emscripten/html5.h>
 #endif
 
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
 #define add_bool_option(name)                                                 \
-    do                                                                        \
-    {                                                                         \
-        state->options.name = nk_checkbox_label (                             \
-            &state->video.nuklear.ctx, #name, &state->options.name);          \
-    }                                                                         \
-    while (0)
+    nk_checkbox_label (&state->video.nuklear.ctx, #name, &state->options.name)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 static double lerp (const double a, const double b, const double t)
@@ -44,24 +39,24 @@ static int dist_squared (const int_vec2_t *a, const int_vec2_t *b)
 }
 
 bool event_key (const SDL_Event *event, state_t *state);
-static void resize_event (state_t *state, const int width, const int height);
+static void resize_event (state_t *state, int width, int height);
 static int coords_to_map_index (const int y, const int x)
 {
     return y * (int)GRID_WIDTH + x;
 }
 
 static bool try_move (
-    const state_t *const state, int *x, int *y, const direction_t direction);
+    const state_t * state, int *x, int *y, direction_t direction);
 
 static bool test_cell (
-    const SDL_Surface *map_surface, const int y, const int x);
+    const SDL_Surface *map_surface, int y, int x);
 
-static bool try_move_and_set (const state_t *const state,
+static bool try_move_and_set (const state_t *state,
     int x,
     int y,
     int *out_x,
     int *out_y,
-    const direction_t direction);
+    direction_t direction);
 static void parse_map (state_t *state, bool load_atlas)
 {
     SDL_IOStream *file = SDL_IOFromConstMem (
@@ -100,7 +95,7 @@ static void parse_map (state_t *state, bool load_atlas)
 }
 
 static const int_vec2_t *direction_to_vec (
-    const direction_t dir, const bool with_bug);
+    direction_t dir, bool with_bug);
 
 static direction_t direction_inv (const direction_t dir)
 {
@@ -108,18 +103,12 @@ static direction_t direction_inv (const direction_t dir)
     {
     case DIRECTION_RIGHT:
         return DIRECTION_LEFT;
-        break;
     case DIRECTION_LEFT:
         return DIRECTION_RIGHT;
-        break;
     case DIRECTION_UP:
         return DIRECTION_DOWN;
-        break;
     case DIRECTION_DOWN:
         return DIRECTION_UP;
-        break;
-    case DIRECTION_NONE:
-        break;
     default:
         break;
     }
@@ -310,10 +299,10 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
             for (auto j = 0; j < 2; j++)
             {
                 state->ghosts.ghost[i].sprite[dir][j]
-                    = (SDL_FRect){ .x = 456 + j * 16 + dir * 32,
-                          .y = 64 + i * 16,
-                          .w = 16,
-                          .h = 16 };
+                    = (SDL_FRect){ .x = 456.0f + (float)j * 16.0f + (float)dir * 32.0f,
+                          .y = 64.0f + (float)i * 16.0f,
+                          .w = 16.0f,
+                          .h = 16.0f };
             }
         }
     }
@@ -328,7 +317,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
                    - 1)
         {
             state->video.sdl.sprites.pacman_die[i].pos = (SDL_FRect){
-                .x = 488.f + 16.0f * i, .y = 0.f + 16.0f, .w = 15.f, .h = 15.f
+                .x = 488.f + 16.0f * (float)i, .y = 0.f + 16.0f, .w = 15.f, .h = 15.f
             };
         }
         else
@@ -469,7 +458,7 @@ int SDL_AppIterate (void *appstate)
                     state, &state->ghosts.ghost[i].trigger.move.trigger))
             {
                 state->ghosts.ghost[i].position_interp = 0;
-                constexpr direction_t direction_prio[4] = { DIRECTION_UP,
+                const direction_t direction_prio[4] = { DIRECTION_UP,
                     DIRECTION_LEFT,
                     DIRECTION_DOWN,
                     DIRECTION_RIGHT };
@@ -854,8 +843,8 @@ static void resize_event (state_t *state, const int width, const int height)
 {
     state->video.sdl.width = width;
     state->video.sdl.height = height;
-    int h = 0;
-    int w = 0;
+    int h;
+    int w;
     const auto wanted_w = width < WIDTH ? width : WIDTH;
     const auto wanted_h = height < HEIGHT ? height : HEIGHT;
     if (HEIGHT * GRID_RATIO <= width)
@@ -890,7 +879,8 @@ static bool test_cell (
                                 + (x * TILE_WIDTH + xp)
                                       * map_surface->format->bytes_per_pixel);
             SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
-            const auto i = (int)r << 16 | (int)g << 8 | b;
+            __attribute__ ((unused)) const auto i
+                = (int)r << 16 | (int)g << 8 | b;
             if (b != 0)
             {
                 return true;
@@ -941,7 +931,6 @@ static bool try_move_and_set (const state_t *const state,
         break;
     default:
         return false;
-        break;
     }
     cx = (int)((cx + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH);
     cy = (int)((cy + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT);

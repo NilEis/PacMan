@@ -160,9 +160,9 @@ typedef struct
     uint32_t tick;
     struct
     {
-        bool draw_targets;
-        bool draw_ghost_cell;
-        bool draw_pacman_cell;
+        nk_bool draw_targets;
+        nk_bool draw_ghost_cell;
+        nk_bool draw_pacman_cell;
     } options;
 } state_t;
 
