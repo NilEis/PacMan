@@ -246,32 +246,32 @@ int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
         case SDLK_PAGEUP:
             nk_input_key (ctx, NK_KEY_SCROLL_UP, down);
             break;
-        case SDLK_z:
+        case SDLK_Z:
             nk_input_key (
                 ctx, NK_KEY_TEXT_UNDO, down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_r:
+        case SDLK_R:
             nk_input_key (
                 ctx, NK_KEY_TEXT_REDO, down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_c:
+        case SDLK_C:
             nk_input_key (
                 ctx, NK_KEY_COPY, down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_v:
+        case SDLK_V:
             nk_input_key (
                 ctx, NK_KEY_PASTE, down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_x:
+        case SDLK_X:
             nk_input_key (
                 ctx, NK_KEY_CUT, down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_b:
+        case SDLK_B:
             nk_input_key (ctx,
                 NK_KEY_TEXT_LINE_START,
                 down && key_state[SDL_SCANCODE_LCTRL]);
             break;
-        case SDLK_e:
+        case SDLK_E:
             nk_input_key (ctx,
                 NK_KEY_TEXT_LINE_END,
                 down && key_state[SDL_SCANCODE_LCTRL]);
