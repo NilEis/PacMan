@@ -1,41 +1,41 @@
 #define NK_IMPLEMENTATION
 #define NK_PRIVATE
 #include "nuklear_default.h"
-#include "nuklear.h"
+#include "nk_util_functions.h"
+#include <SDL3/SDL_clipboard.h>
+#include <stdlib.h>
 
 static int SDL_RenderGeometryRaw8BitColor (SDL_Renderer *renderer,
     SDL_Texture *texture,
     const float *xy,
-    int xy_stride,
+    const int xy_stride,
     const SDL_Color *color,
-    int color_stride,
+    const int color_stride,
     const float *uv,
-    int uv_stride,
-    int num_vertices,
+    const int uv_stride,
+    const int num_vertices,
     const void *indices,
-    int num_indices,
-    int size_indices)
+    const int num_indices,
+    const int size_indices)
 {
-    int i, retval;
-    const Uint8 *color2 = (const Uint8 *)color;
-    SDL_FColor *color3;
+    auto color2 = (const Uint8 *)color;
 
     if (num_vertices <= 0)
     {
         return SDL_InvalidParamError ("num_vertices");
     }
-    if (!color)
+    if (color == nullptr)
     {
         return SDL_InvalidParamError ("color");
     }
 
-    color3 = calloc (num_vertices, sizeof (SDL_FColor));
-    if (!color3)
+    SDL_FColor *color3 = calloc (num_vertices, sizeof (SDL_FColor));
+    if (color3 == nullptr)
     {
         return -1;
     }
 
-    for (i = 0; i < num_vertices; ++i)
+    for (int i = 0; i < num_vertices; ++i)
     {
         color3[i].r = color->r / 255.0f;
         color3[i].g = color->g / 255.0f;
@@ -45,7 +45,7 @@ static int SDL_RenderGeometryRaw8BitColor (SDL_Renderer *renderer,
         color = (const SDL_Color *)color2;
     }
 
-    retval = SDL_RenderGeometryRaw (renderer,
+    const int retval = SDL_RenderGeometryRaw (renderer,
         texture,
         xy,
         xy_stride,
@@ -135,7 +135,7 @@ void nk_render (state_t *state, const enum nk_anti_aliasing AA)
             vs,
             (const float *)((const nk_byte *)vertices + vt),
             vs,
-            (vbuf.needed / vs),
+            vbuf.needed / vs,
             (void *)offset,
             cmd->elem_count,
             2);
@@ -165,14 +165,13 @@ void nk_sdl_clipboard_paste (const nk_handle usr, struct nk_text_edit *edit)
 void nk_sdl_clipboard_copy (
     const nk_handle usr, const char *text, const int len)
 {
-    char *str;
     (void)usr;
     if (!len)
         return;
-    str = (char *)malloc ((size_t)len + 1);
-    if (!str)
+    char *str = malloc ((size_t)len + 1);
+    if (str == nullptr)
         return;
-    memcpy (str, text, (size_t)len);
+    memcpy (str, text, len);
     str[len] = '\0';
     SDL_SetClipboardText (str);
     free (str);
@@ -332,8 +331,8 @@ int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
     {
         if (ctx->input.mouse.grabbed)
         {
-            int x = (int)ctx->input.mouse.prev.x,
-                y = (int)ctx->input.mouse.prev.y;
+            const int x = (int)ctx->input.mouse.prev.x;
+            const int y = (int)ctx->input.mouse.prev.y;
             nk_input_motion (ctx, x + evt->motion.xrel, y + evt->motion.yrel);
         }
         else

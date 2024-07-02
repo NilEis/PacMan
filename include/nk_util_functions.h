@@ -2,10 +2,7 @@
 #define NK_UTIL_FUNCTIONS_H
 
 #include "nuklear_default.h"
-#include "nuklear.h"
 #include "typedefs.h"
-
-#include <SDL3/SDL_clipboard.h>
 
 void nk_render (state_t *state, enum nk_anti_aliasing AA);
 

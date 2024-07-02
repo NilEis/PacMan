@@ -1,7 +1,3 @@
-//
-// Created by NilEis on 29.06.2024.
-//
-
 #ifndef PACMAN_NUKLEAR_DEFAULT_H
 #define PACMAN_NUKLEAR_DEFAULT_H
 
@@ -22,5 +18,6 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-
+#include "nuklear.h"
+#undef PACMAN_NUKLEAR_DEFAULT_H // no idea why it does not work without undef
 #endif // PACMAN_NUKLEAR_DEFAULT_H

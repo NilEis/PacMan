@@ -1,9 +1,9 @@
-#include "SDL3/SDL_scancode.h"
 #include "maps.h"
 #define SDL_MAIN_USE_CALLBACKS
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_main.h"
 #include "SDL3/SDL_render.h"
+#include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3_image/SDL_image.h"
 #include "assets.h"
@@ -46,10 +46,9 @@ static int coords_to_map_index (const int y, const int x)
 }
 
 static bool try_move (
-    const state_t * state, int *x, int *y, direction_t direction);
+    const state_t *state, int *x, int *y, direction_t direction);
 
-static bool test_cell (
-    const SDL_Surface *map_surface, int y, int x);
+static bool test_cell (const SDL_Surface *map_surface, int y, int x);
 
 static bool try_move_and_set (const state_t *state,
     int x,
@@ -57,7 +56,7 @@ static bool try_move_and_set (const state_t *state,
     int *out_x,
     int *out_y,
     direction_t direction);
-static void parse_map (state_t *state, bool load_atlas)
+static void parse_map (state_t *state, const bool load_atlas)
 {
     SDL_IOStream *file = SDL_IOFromConstMem (
         asset_general_sprites_png, asset_general_sprites_png_size);
@@ -94,8 +93,7 @@ static void parse_map (state_t *state, bool load_atlas)
     SDL_DestroySurface (map_surface);
 }
 
-static const int_vec2_t *direction_to_vec (
-    direction_t dir, bool with_bug);
+static const int_vec2_t *direction_to_vec (direction_t dir, bool with_bug);
 
 static direction_t direction_inv (const direction_t dir)
 {
@@ -185,7 +183,7 @@ static void init_state (state_t *state,
     }
 }
 
-int SDL_AppInit (void **appstate, int argc, char **argv)
+int SDL_AppInit (void **appstate, const int argc, char **argv)
 {
     (void)argc;
     (void)argv;
@@ -298,11 +296,12 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         {
             for (auto j = 0; j < 2; j++)
             {
-                state->ghosts.ghost[i].sprite[dir][j]
-                    = (SDL_FRect){ .x = 456.0f + (float)j * 16.0f + (float)dir * 32.0f,
-                          .y = 64.0f + (float)i * 16.0f,
-                          .w = 16.0f,
-                          .h = 16.0f };
+                state->ghosts.ghost[i].sprite[dir][j] = (SDL_FRect){
+                    .x = 456.0f + (float)j * 16.0f + (float)dir * 32.0f,
+                    .y = 64.0f + (float)i * 16.0f,
+                    .w = 16.0f,
+                    .h = 16.0f
+                };
             }
         }
     }
@@ -316,9 +315,11 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
                        / sizeof (state->video.sdl.sprites.pacman_die[0])
                    - 1)
         {
-            state->video.sdl.sprites.pacman_die[i].pos = (SDL_FRect){
-                .x = 488.f + 16.0f * (float)i, .y = 0.f + 16.0f, .w = 15.f, .h = 15.f
-            };
+            state->video.sdl.sprites.pacman_die[i].pos
+                = (SDL_FRect){ .x = 488.f + 16.0f * (float)i,
+                      .y = 0.f + 16.0f,
+                      .w = 15.f,
+                      .h = 15.f };
         }
         else
         {
@@ -333,7 +334,7 @@ int SDL_AppInit (void **appstate, int argc, char **argv)
         nk_font_atlas_init_default (&state->video.nuklear.atlas);
         nk_font_atlas_begin (&state->video.nuklear.atlas);
         const struct nk_font_config config = nk_font_config (0);
-        auto font = nk_font_atlas_add_default (
+        const auto font = nk_font_atlas_add_default (
             &state->video.nuklear.atlas, 13, &config);
         int img_width = 0;
         int img_height = 0;
@@ -458,7 +459,7 @@ int SDL_AppIterate (void *appstate)
                     state, &state->ghosts.ghost[i].trigger.move.trigger))
             {
                 state->ghosts.ghost[i].position_interp = 0;
-                const direction_t direction_prio[4] = { DIRECTION_UP,
+                constexpr direction_t direction_prio[4] = { DIRECTION_UP,
                     DIRECTION_LEFT,
                     DIRECTION_DOWN,
                     DIRECTION_RIGHT };
@@ -577,7 +578,7 @@ int SDL_AppIterate (void *appstate)
                     : state->pacman.animation + 1;
         }
         trigger_start_after (
-            state, &state->pacman.trigger.pacman_die, PACMAN_ANIMATION_TICKS);
+            state, &state->pacman.trigger.pacman_die, PACMAN_ANIMATION_TICKS*10);
     }
 
     SDL_SetRenderTarget (
@@ -610,14 +611,13 @@ int SDL_AppIterate (void *appstate)
 
             SDL_RenderTexture (state->video.sdl.renderer,
                 state->video.sdl.sprites.atlas,
-                state->pacman.dead
-                    ? (&state->video.sdl.sprites
-                              .pacman_die[state->pacman.animation]
-                              .pos)
-                    : (&state->video.sdl.sprites
-                              .pacman[state->pacman.direction]
-                                     [state->pacman.animation]
-                              .pos),
+                state->pacman.dead ? &state->video.sdl.sprites
+                                          .pacman_die[state->pacman.animation]
+                                          .pos
+                                   : &state->video.sdl.sprites
+                                          .pacman[state->pacman.direction]
+                                                 [state->pacman.animation]
+                                          .pos,
                 &(SDL_FRect){
                     ((float)state->pacman.position.x + x_offset) * CELL_WIDTH,
                     ((float)state->pacman.position.y + y_offset) * CELL_HEIGHT,
@@ -906,8 +906,8 @@ static bool try_move (
 }
 
 static bool try_move_and_set (const state_t *const state,
-    int x,
-    int y,
+    const int x,
+    const int y,
     int *out_x,
     int *out_y,
     const direction_t direction)

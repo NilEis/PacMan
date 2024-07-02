@@ -49,7 +49,7 @@ static bool trigger_between (const trigger_t *trigger,
     if (trigger->tick != TRIGGER_DISABLED)
     {
         const auto ticks = trigger_ticks_since_trigger (state, trigger);
-        return (ticks >= begin) && (ticks < end);
+        return ticks >= begin && ticks < end;
     }
     return false;
 }
