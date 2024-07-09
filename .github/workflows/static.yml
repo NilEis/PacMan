@@ -31,18 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          # Make sure to set a version number!
-          version: 1.38.40
-          # This is the name of the cache folder.
-          # The cache folder will be placed in the build directory,
-          #  so make sure it doesn't conflict with anything!
-          actions-cache-folder: 'emsdk-cache'
-          update: true
+      - name: clone emsdk
+        run: git clone https://github.com/emscripten-core/emsdk.git ../emsdk
+      - name: install emsdk
+        run: ../emsdk/emsdk install latest
+      - name: activate emsdk
+        run: ../emsdk/emsdk install latest
+      - name: update path
+        run: source ../emsdk/emsdk_env.sh
       - name: restore cmake-cache
         uses: actions/cache@v4
         with:
