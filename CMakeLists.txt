@@ -38,9 +38,7 @@ add_source(${CMAKE_CURRENT_SOURCE_DIR} ghosts)
 add_source(${CMAKE_CURRENT_SOURCE_DIR} utils)
 add_source(${CMAKE_CURRENT_BINARY_DIR}/generated assets)
 
-if (NOT EMSCRIPTEN)
-    list(APPEND SOURCES ${HEADERS})
-endif (NOT EMSCRIPTEN)
+list(APPEND SOURCES ${HEADERS})
 message(STATUS "HEADERS: ${HEADERS}")
 message(STATUS "SOURCES: ${SOURCES}")
 
@@ -114,10 +112,8 @@ endif ()
 target_include_directories(
         ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 
-if (NOT EMSCRIPTEN)
-    message(STATUS "Precompile headers")
-    target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
-endif (NOT EMSCRIPTEN)
+target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
 option(SUPPORT_CLANGD "Support clangd" ON)
