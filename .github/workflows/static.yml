@@ -42,6 +42,7 @@ jobs:
           # The cache folder will be placed in the build directory,
           #  so make sure it doesn't conflict with anything!
           actions-cache-folder: 'emsdk-cache'
+          update: true
       - name: restore cmake-cache
         uses: actions/cache@v4
         with:
@@ -51,11 +52,13 @@ jobs:
         run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
       - name: build
         run: emmake make -C ./build
+      - name: copy to artifact folder 
+        run: mkdir ./build/artifact ; for file in ./build/pacman.*; do echo cp "$file" "${file/build/build\/artifact}";done
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: './build'
+          path: './build/artifact'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
