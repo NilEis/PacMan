@@ -1,6 +1,20 @@
 cmake_minimum_required(VERSION 3.21) # Set the minimum required CMake version
 project(pacman C)
 
+function(add_source folder name)
+    cmake_path(SET src_path_start NORMALIZE "${folder}/src/")
+    cmake_path(SET head_path_start NORMALIZE "${folder}/include/")
+
+    cmake_path(APPEND src_path "${src_path_start}" "${name}.c")
+    cmake_path(APPEND head_path "${head_path_start}" "${name}.h")
+
+    list(APPEND SOURCES "${src_path}")
+    list(APPEND HEADERS "${head_path}")
+
+    set(SOURCES ${SOURCES} PARENT_SCOPE)
+    set(HEADERS ${HEADERS} PARENT_SCOPE)
+endfunction(add_source)
+
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
 include(FetchContent)
@@ -8,20 +22,27 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
-create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h)
+create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/generated/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/generated/include/assets.h)
 
 set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/maps.h
-        ${CMAKE_CURRENT_BINARY_DIR}/src/include/assets.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/nk_util_functions.h)
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/nuklear_default.h)
 
-set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/maps.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/nk_util_functions.c
-        ${CMAKE_CURRENT_BINARY_DIR}/src/assets.c ${HEADERS}
-        include/nuklear_default.h)
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c)
+
+add_source(${CMAKE_CURRENT_SOURCE_DIR} maps)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} nk_util_functions)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} int_vec2)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} ghosts)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} utils)
+add_source(${CMAKE_CURRENT_BINARY_DIR}/generated assets)
+
+list(APPEND SOURCES ${HEADERS})
+
+message(STATUS "HEADERS: ${HEADERS}")
+message(STATUS "SOURCES: ${SOURCES}")
+
 
 if (EMSCRIPTEN)
     set(SUPPORT_CLANGD
@@ -90,7 +111,7 @@ if (EMSCRIPTEN)
 endif ()
 
 target_include_directories(
-        ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/src/include)
+        ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 
 file(GLOB SDL_HEADER ${sdl_SOURCE_DIR}/include/SDL3/*.h)
 

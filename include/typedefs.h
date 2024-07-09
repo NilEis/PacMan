@@ -15,6 +15,8 @@ typedef enum
     DIRECTION_NONE = 4
 } direction_t;
 
+#include "int_vec2.h"
+
 typedef enum
 {
     CELL_EMPTY,
@@ -22,12 +24,6 @@ typedef enum
     CELL_COIN,
     CELL_GHOST_WALL
 } cell_type_t;
-
-typedef struct
-{
-    int x;
-    int y;
-} int_vec2_t;
 
 typedef struct
 {

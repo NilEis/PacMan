@@ -6,18 +6,19 @@
 #include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3_image/SDL_image.h"
-#include "assets.h"
 #include "defines.h"
+#include "ghosts.h"
+#include "int_vec2.h"
 #include "nk_util_functions.h"
 #include "trigger.h"
 #include "typedefs.h"
+#include "utils.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #endif
 
-#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,86 +33,8 @@ static double lerp (const double a, const double b, const double t)
     return b * (1.0f - t) + a * t;
 }
 
-static int dist_squared (const int_vec2_t *a, const int_vec2_t *b)
-{
-    const int_vec2_t c = { .x = a->x - b->x, .y = a->y - b->y };
-    return c.x * c.x + c.y * c.y;
-}
-
 bool event_key (const SDL_Event *event, state_t *state);
 static void resize_event (state_t *state, int width, int height);
-static int coords_to_map_index (const int y, const int x)
-{
-    return y * (int)GRID_WIDTH + x;
-}
-
-static bool try_move (
-    const state_t *state, int *x, int *y, direction_t direction);
-
-static bool test_cell (const SDL_Surface *map_surface, int y, int x);
-
-static bool try_move_and_set (const state_t *state,
-    int x,
-    int y,
-    int *out_x,
-    int *out_y,
-    direction_t direction);
-static void parse_map (state_t *state, const bool load_atlas)
-{
-    SDL_IOStream *file = SDL_IOFromConstMem (
-        asset_general_sprites_png, asset_general_sprites_png_size);
-    SDL_Surface *full_asset_image = IMG_LoadTyped_IO (file, SDL_TRUE, "PNG");
-    if (load_atlas)
-        state->video.sdl.sprites.atlas = SDL_CreateTextureFromSurface (
-            state->video.sdl.renderer, full_asset_image);
-    SDL_Surface *map_surface
-        = SDL_CreateSurface ((int)state->video.sdl.sprites.map.pos.w,
-            (int)state->video.sdl.sprites.map.pos.h,
-            SDL_PIXELFORMAT_RGBA32);
-    const auto res = SDL_BlitSurface (full_asset_image,
-        &(SDL_Rect){ (int)state->video.sdl.sprites.map.pos.x,
-            (int)state->video.sdl.sprites.map.pos.y,
-            (int)state->video.sdl.sprites.map.pos.w,
-            (int)state->video.sdl.sprites.map.pos.h },
-        map_surface,
-        NULL);
-    if (res != 0)
-    {
-        printf ("%d: %s\n", res, SDL_GetError ());
-    }
-    for (auto y = 0; y < GRID_HEIGHT; y++)
-    {
-        for (auto x = 0; x < GRID_WIDTH; x++)
-        {
-            if (test_cell (map_surface, y, x))
-            {
-                state->map[coords_to_map_index (y, x)] = CELL_WALL;
-            }
-        }
-    }
-    SDL_DestroySurface (full_asset_image);
-    SDL_DestroySurface (map_surface);
-}
-
-static const int_vec2_t *direction_to_vec (direction_t dir, bool with_bug);
-
-static direction_t direction_inv (const direction_t dir)
-{
-    switch (dir)
-    {
-    case DIRECTION_RIGHT:
-        return DIRECTION_LEFT;
-    case DIRECTION_LEFT:
-        return DIRECTION_RIGHT;
-    case DIRECTION_UP:
-        return DIRECTION_DOWN;
-    case DIRECTION_DOWN:
-        return DIRECTION_UP;
-    default:
-        break;
-    }
-    return DIRECTION_NONE;
-}
 
 static void init_state (state_t *state,
     const int init_width,
@@ -143,6 +66,14 @@ static void init_state (state_t *state,
         trigger_stop (&state->ghosts.ghost[i].trigger.move.trigger);
         trigger_stop (&state->ghosts.ghost[i].trigger.move_between);
     }
+
+    state->ghosts.ghost[GHOST_BLINKY].corner
+        = (int_vec2_t){ .x = GRID_WIDTH - 3, .y = -4 };
+    state->ghosts.ghost[GHOST_PINKY].corner = (int_vec2_t){ .x = 2, .y = -4 };
+    state->ghosts.ghost[GHOST_INKY].corner
+        = (int_vec2_t){ .x = GRID_WIDTH - 1, .y = GRID_HEIGHT };
+    state->ghosts.ghost[GHOST_CLYDE].corner
+        = (int_vec2_t){ .x = 0, .y = GRID_HEIGHT };
 
     state->ghosts.ghost[GHOST_BLINKY].color
         = (rgb_t){ .r = 255, .g = 0, .b = 0 };
@@ -385,124 +316,7 @@ int SDL_AppIterate (void *appstate)
     state->last_ticks = SDL_GetTicks ();
     state->tick++;
 
-    {
-        const int_vec2_t *pacman_dir
-            = direction_to_vec (state->pacman.direction, true);
-        for (auto i = 0; i < 4; i++)
-        {
-            switch (i)
-            {
-            case GHOST_BLINKY:
-            {
-                state->ghosts.ghost[i].target.x = state->pacman.position.x;
-                state->ghosts.ghost[i].target.y = state->pacman.position.y;
-            }
-            break;
-            case GHOST_PINKY:
-            {
-                state->ghosts.ghost[i].target.x
-                    = state->pacman.position.x + 4 * pacman_dir->x;
-                state->ghosts.ghost[i].target.y
-                    = state->pacman.position.y + 4 * pacman_dir->y;
-            }
-            break;
-            case GHOST_INKY:
-            {
-                const int_vec2_t pac_offset
-                    = { .x = state->pacman.position.x + pacman_dir->x * 2,
-                          .y = state->pacman.position.y + pacman_dir->y * 2 };
-                const int_vec2_t blinky_to_pac_offset = {
-                    .x
-                    = pac_offset.x - state->ghosts.ghost[GHOST_BLINKY].pos.x,
-                    .y = pac_offset.y - state->ghosts.ghost[GHOST_BLINKY].pos.y
-                };
-                state->ghosts.ghost[i].target.x
-                    = state->ghosts.ghost[GHOST_BLINKY].pos.x
-                    + blinky_to_pac_offset.x * 2;
-                state->ghosts.ghost[i].target.y
-                    = state->ghosts.ghost[GHOST_BLINKY].pos.y
-                    + blinky_to_pac_offset.y * 2;
-            }
-            break;
-            case GHOST_CLYDE:
-            {
-                if (dist_squared (
-                        &state->ghosts.ghost[i].pos, &state->pacman.position)
-                    >= 8 * 8)
-                {
-                    state->ghosts.ghost[i].target.x
-                        = state->ghosts.ghost[GHOST_BLINKY].target.x;
-                    state->ghosts.ghost[i].target.y
-                        = state->ghosts.ghost[GHOST_BLINKY].target.y;
-                }
-                else
-                {
-                    state->ghosts.ghost[i].target.x
-                        = state->ghosts.ghost[i].corner.x;
-                    state->ghosts.ghost[i].target.y
-                        = state->ghosts.ghost[i].corner.y;
-                }
-            }
-            break;
-            default:
-                break;
-            }
-            if (trigger_triggered (
-                    state, &state->ghosts.ghost[i].trigger.move_between))
-            {
-                state->ghosts.ghost[i].position_interp++;
-                trigger_after (state,
-                    &state->ghosts.ghost[i].trigger.move_between,
-                    GHOST_MOVE_BETWEEN_CELLS_TICKS);
-            }
-            if (trigger_triggered (
-                    state, &state->ghosts.ghost[i].trigger.move.trigger))
-            {
-                state->ghosts.ghost[i].position_interp = 0;
-                constexpr direction_t direction_prio[4] = { DIRECTION_UP,
-                    DIRECTION_LEFT,
-                    DIRECTION_DOWN,
-                    DIRECTION_RIGHT };
-                int min_dist = INT_MAX;
-                direction_t min_dir = DIRECTION_NONE;
-                int_vec2_t min_pos = { 0 };
-                for (auto d = 0; d < 4; d++)
-                {
-                    if (direction_inv (state->ghosts.ghost[i].dir)
-                        == direction_prio[d])
-                    {
-                        continue;
-                    }
-                    int_vec2_t n_pos = { .x = state->ghosts.ghost[i].pos.x,
-                        .y = state->ghosts.ghost[i].pos.y };
-                    if (!try_move (
-                            state, &n_pos.x, &n_pos.y, direction_prio[d]))
-                    {
-                        continue;
-                    }
-                    const int new_dist = dist_squared (
-                        &n_pos, &state->ghosts.ghost[i].target);
-                    if (new_dist < min_dist)
-                    {
-                        min_dist = new_dist;
-                        min_dir = direction_prio[d];
-                        min_pos = n_pos;
-                    }
-                }
-                state->ghosts.ghost[i].dir = min_dir;
-                state->ghosts.ghost[i].pos = min_pos;
-                trigger_start_after (state,
-                    &state->ghosts.ghost[i].trigger.move.trigger,
-                    state->ghosts.ghost[i].trigger.move.ticks);
-            }
-            if (state->ghosts.ghost[i].pos.x == state->pacman.position.x
-                && state->ghosts.ghost[i].pos.y == state->pacman.position.y)
-            {
-                trigger_start_after (
-                    state, &state->pacman.trigger.pacman_die, 0);
-            }
-        }
-    }
+    update_ghosts (state);
 
     if (trigger_triggered (state, &state->pacman.trigger.pacman_animation))
     {
@@ -577,8 +391,9 @@ int SDL_AppIterate (void *appstate)
                     ? PACMAN_DEAD_END_FRAME
                     : state->pacman.animation + 1;
         }
-        trigger_start_after (
-            state, &state->pacman.trigger.pacman_die, PACMAN_ANIMATION_TICKS*10);
+        trigger_start_after (state,
+            &state->pacman.trigger.pacman_die,
+            PACMAN_ANIMATION_TICKS * .6f);
     }
 
     SDL_SetRenderTarget (
@@ -624,38 +439,6 @@ int SDL_AppIterate (void *appstate)
                     CELL_WIDTH,
                     CELL_HEIGHT });
         }
-
-        for (auto i = 0; i < 4; i++)
-        {
-            int x = state->ghosts.ghost[i].pos.x;
-            int y = state->ghosts.ghost[i].pos.y;
-            double x_offset = 0;
-            double y_offset = 0;
-            try_move_and_set (state, x, y, &x, &y, state->ghosts.ghost[i].dir);
-            {
-                x_offset = (double)state->ghosts.ghost[i].pos.x
-                         - lerp (state->ghosts.ghost[i].pos.x,
-                             x,
-                             (double)state->ghosts.ghost[i].position_interp
-                                 / state->ghosts.ghost[i].trigger.move.ticks);
-                y_offset = (double)state->ghosts.ghost[i].pos.y
-                         - lerp (state->ghosts.ghost[i].pos.y,
-                             y,
-                             (double)state->ghosts.ghost[i].position_interp
-                                 / state->ghosts.ghost[i].trigger.move.ticks);
-            }
-
-            SDL_RenderTexture (state->video.sdl.renderer,
-                state->video.sdl.sprites.atlas,
-                &state->ghosts.ghost[i].sprite[state->ghosts.ghost[i].dir]
-                                              [state->ghosts.animation.value],
-                &(SDL_FRect){ ((float)state->ghosts.ghost[i].pos.x + x_offset)
-                                  * CELL_WIDTH,
-                    ((float)state->ghosts.ghost[i].pos.y + y_offset)
-                        * CELL_HEIGHT,
-                    CELL_WIDTH,
-                    CELL_HEIGHT });
-        }
         if (state->options.draw_pacman_cell)
         {
             SDL_SetRenderDrawColor (
@@ -666,57 +449,8 @@ int SDL_AppIterate (void *appstate)
                     .w = CELL_WIDTH,
                     .h = CELL_HEIGHT });
         }
-        if (state->options.draw_targets)
-        {
-            for (auto i = 0; i < 4; i++)
-            {
-                SDL_SetRenderDrawColor (state->video.sdl.renderer,
-                    state->ghosts.ghost[i].color.r,
-                    state->ghosts.ghost[i].color.g,
-                    state->ghosts.ghost[i].color.b,
-                    125);
-                SDL_RenderFillRect (state->video.sdl.renderer,
-                    &(SDL_FRect){
-                        .x = state->ghosts.ghost[i].pos.x * CELL_WIDTH,
-                        .y = state->ghosts.ghost[i].pos.y * CELL_HEIGHT,
-                        .w = CELL_WIDTH,
-                        .h = CELL_HEIGHT });
-                SDL_RenderLines (state->video.sdl.renderer,
-                    (SDL_FPoint[]){
-                        (SDL_FPoint){ state->ghosts.ghost[i].pos.x * CELL_WIDTH
-                                          - CELL_WIDTH / 2,
-                                     state->ghosts.ghost[i].pos.y * CELL_HEIGHT
-                                + CELL_HEIGHT / 2 },
-                        (SDL_FPoint){ state->ghosts.ghost[i].pos.x * CELL_WIDTH
-                                          - CELL_WIDTH / 2,
-                                     state->ghosts.ghost[i].target.y * CELL_HEIGHT
-                                + CELL_HEIGHT / 2 },
-                        (SDL_FPoint){
-                                     state->ghosts.ghost[i].target.x * CELL_WIDTH
-                                - CELL_WIDTH / 2,
-                                     state->ghosts.ghost[i].target.y * CELL_HEIGHT
-                                + CELL_HEIGHT / 2 }
-                },
-                    3);
-            }
-        }
-        if (state->options.draw_targets)
-        {
-            for (auto i = 0; i < 4; i++)
-            {
-                SDL_SetRenderDrawColor (state->video.sdl.renderer,
-                    state->ghosts.ghost[i].color.r,
-                    state->ghosts.ghost[i].color.g,
-                    state->ghosts.ghost[i].color.b,
-                    125);
-                SDL_RenderFillRect (state->video.sdl.renderer,
-                    &(SDL_FRect){
-                        .x = state->ghosts.ghost[i].target.x * CELL_WIDTH,
-                        .y = state->ghosts.ghost[i].target.y * CELL_HEIGHT,
-                        .w = CELL_WIDTH,
-                        .h = CELL_HEIGHT });
-            }
-        }
+
+        draw_ghosts (state);
     }
     SDL_SetRenderTarget (state->video.sdl.renderer, NULL);
     {
@@ -861,117 +595,4 @@ static void resize_event (state_t *state, const int width, const int height)
     state->video.sdl.target_rect.y = (height - h) / 2.0;
     state->video.sdl.target_rect.w = w;
     state->video.sdl.target_rect.h = h;
-}
-
-static bool test_cell (
-    const SDL_Surface *map_surface, const int y, const int x)
-{
-    for (auto yp = 0; yp < TILE_HEIGHT; yp++)
-    {
-        for (auto xp = 0; xp < TILE_WIDTH; xp++)
-        {
-            uint8_t r = 1;
-            uint8_t g = 2;
-            uint8_t b = 3;
-            const auto pixel
-                = *(uint32_t *)((uint8_t *)map_surface->pixels
-                                + (y * TILE_HEIGHT + yp) * map_surface->pitch
-                                + (x * TILE_WIDTH + xp)
-                                      * map_surface->format->bytes_per_pixel);
-            SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
-            __attribute__ ((unused)) const auto i
-                = (int)r << 16 | (int)g << 8 | b;
-            if (b != 0)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-static bool try_move (
-    const state_t *const state, int *x, int *y, const direction_t direction)
-{
-    int cx = 0;
-    int cy = 0;
-    bool res = false;
-    if (try_move_and_set (state, *x, *y, &cx, &cy, direction))
-    {
-        *x = cx;
-        *y = cy;
-        res = true;
-    }
-    return res;
-}
-
-static bool try_move_and_set (const state_t *const state,
-    const int x,
-    const int y,
-    int *out_x,
-    int *out_y,
-    const direction_t direction)
-{
-    auto cx = x;
-    auto cy = y;
-    bool res = false;
-    switch (direction)
-    {
-    case DIRECTION_RIGHT:
-        cx++;
-        break;
-    case DIRECTION_LEFT:
-        cx--;
-        break;
-    case DIRECTION_UP:
-        cy--;
-        break;
-    case DIRECTION_DOWN:
-        cy++;
-        break;
-    default:
-        return false;
-    }
-    cx = (int)((cx + (uint32_t)GRID_WIDTH) % (uint32_t)GRID_WIDTH);
-    cy = (int)((cy + (uint32_t)GRID_HEIGHT) % (uint32_t)GRID_HEIGHT);
-    *out_x = cx;
-    *out_y = cy;
-    if (state->map[coords_to_map_index (cy, cx)] != CELL_WALL
-        && state->map[coords_to_map_index (cy, cx)] != CELL_GHOST_WALL)
-    {
-        res = true;
-    }
-    return res;
-}
-
-static const int_vec2_t *direction_to_vec (
-    const direction_t dir, const bool with_bug)
-{
-    static constexpr auto right = (int_vec2_t){ .x = 1, .y = 0 };
-    static constexpr auto left = (int_vec2_t){ .x = -1, .y = 0 };
-    static constexpr auto up = (int_vec2_t){ .x = 0, .y = -1 };
-    static constexpr auto up_bug = (int_vec2_t){ .x = -1, .y = -1 };
-    static constexpr auto down = (int_vec2_t){ .x = 0, .y = 1 };
-    static constexpr auto none = (int_vec2_t){ .x = 0, .y = 0 };
-    switch (dir)
-    {
-    case DIRECTION_RIGHT:
-        return &right;
-        break;
-    case DIRECTION_LEFT:
-        return &left;
-        break;
-    case DIRECTION_UP:
-        return with_bug ? &up_bug : &up;
-        break;
-    case DIRECTION_DOWN:
-        return &down;
-        break;
-    case DIRECTION_NONE:
-        return &none;
-        break;
-    default:
-        return &none;
-        break;
-    }
 }
