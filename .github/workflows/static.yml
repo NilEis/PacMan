@@ -32,13 +32,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: clone emsdk
-        run: git clone https://github.com/emscripten-core/emsdk.git ../emsdk
+        run: git clone https://github.com/emscripten-core/emsdk.git ./emsdk
       - name: install emsdk
-        run: ../emsdk/emsdk install latest
+        run: ./emsdk/emsdk install latest
       - name: activate emsdk
-        run: ../emsdk/emsdk install latest
+        run: ./emsdk/emsdk install latest
       - name: update path
-        run: source ../emsdk/emsdk_env.sh
+        run: source ./emsdk/emsdk_env.sh
       - name: restore cmake-cache
         uses: actions/cache@v4
         with:
