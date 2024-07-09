@@ -71,7 +71,7 @@ if (EMSCRIPTEN)
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMODULARIZE")
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -flto")
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -sEXPORT_NAME=PacMan")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM_ASYNC_COMPILATION")
+    #set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM_ASYNC_COMPILATION")
     set(${LINK_FLAGS}
             "${${LINK_FLAGS}} --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html"
     )
