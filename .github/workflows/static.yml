@@ -49,8 +49,8 @@ jobs:
           key: ${{ runner.os }}-build_cache
       - name: configure
         run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
-      - name: build
-        run: emmake make -C ./build
+      #- name: build
+       # run: emmake make -C ./build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
