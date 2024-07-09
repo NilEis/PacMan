@@ -36,7 +36,7 @@ jobs:
       - name: install emsdk
         run: ./emsdk/emsdk install latest
       - name: activate emsdk
-        run: ./emsdk/emsdk install latest
+        run: ./emsdk/emsdk activate latest
       - name: update path
         run: source ./emsdk/emsdk_env.sh
       - name: restore cmake-cache
@@ -45,9 +45,9 @@ jobs:
           path: ./build
           key: ${{ runner.os }}-build_cache
       - name: configure
-        run: source ./emsdk/emsdk_env.sh ; emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
+        run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
       - name: build
-        run: source ./emsdk/emsdk_env.sh ; emmake make -C ./build
+        run: emmake make -C ./build
       - name: copy to artifact folder 
         run: mkdir ./build/artifact ; for file in ./build/pacman.*; do echo cp "$file" "${file/build/build\/artifact}";done
       - name: Upload artifact
