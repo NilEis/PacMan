@@ -38,8 +38,9 @@ add_source(${CMAKE_CURRENT_SOURCE_DIR} ghosts)
 add_source(${CMAKE_CURRENT_SOURCE_DIR} utils)
 add_source(${CMAKE_CURRENT_BINARY_DIR}/generated assets)
 
-list(APPEND SOURCES ${HEADERS})
-
+if (NOT EMSCRIPTEN)
+    list(APPEND SOURCES ${HEADERS})
+endif (NOT EMSCRIPTEN)
 message(STATUS "HEADERS: ${HEADERS}")
 message(STATUS "SOURCES: ${SOURCES}")
 
