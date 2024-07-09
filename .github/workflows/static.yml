@@ -1,3 +1,6 @@
+env:
+  EM_VERSION: 3.1.61
+  EM_CACHE_FOLDER: 'emsdk-cache'
 # Simple workflow for deploying static content to GitHub Pages
 name: Deploy static content to Pages
 
@@ -31,12 +34,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup cache
+        id: cache-system-libraries
+        uses: actions/cache@v2
+        with:
+          path: ${{env.EM_CACHE_FOLDER}}
+          key: ${{env.EM_VERSION}}-${{ runner.os }}
       - name: restore emsdk
         uses: mymindstorm/setup-emsdk@v14
         with:
-          # Make sure to set a version number!
-          version: 3.1.61
-          actions-cache-folder: 'emsdk-cache'
+          version: ${{env.EM_VERSION}}
+          actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
       - name: restore cmake-cache
         uses: actions/cache@v4
         with:
