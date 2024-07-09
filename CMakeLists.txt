@@ -98,7 +98,7 @@ FetchContent_MakeAvailable(sdl sdl_image)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} SDL3-static SDL3_image::SDL3_image nuklear)
+target_link_libraries(${PROJECT_NAME} SDL3::SDL3 SDL3_image::SDL3_image nuklear)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NAME="${PROJECT_NAME}")
 
 if (EMSCRIPTEN)
@@ -113,8 +113,6 @@ endif ()
 
 target_include_directories(
         ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
-
-file(GLOB SDL_HEADER ${sdl_SOURCE_DIR}/include/SDL3/*.h)
 
 if (NOT EMSCRIPTEN)
     message(STATUS "Precompile headers")
