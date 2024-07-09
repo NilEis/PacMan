@@ -115,8 +115,10 @@ target_include_directories(
 
 file(GLOB SDL_HEADER ${sdl_SOURCE_DIR}/include/SDL3/*.h)
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
-
+if (NOT EMSCRIPTEN)
+    target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
+endif (NOT EMSCRIPTEN
+)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
 option(SUPPORT_CLANGD "Support clangd" ON)
