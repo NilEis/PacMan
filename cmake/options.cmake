@@ -12,3 +12,6 @@ set(SDL_TEST_LIBRARY
 set(SDL3IMAGE_WERROR
         OFF
         CACHE BOOL "" FORCE)
+set(SDL_WERROR
+        OFF
+        CACHE BOOL "" FORCE)
