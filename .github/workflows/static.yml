@@ -55,7 +55,7 @@ jobs:
       - name: build
         run: emmake make -C ./build -j
       - name: copy to artifact folder 
-        run: mkdir -p ./build/artifact ; for file in ./build/pacman.*; do echo cp "$file" "${file/build/build\/artifact}";done ; cp ./build/pacman.html ./build/artifact/index.html
+        run: mkdir -p ./build/artifact ; for file in ./build/pacman.*; do cp "$file" "${file/build/build\/artifact}";done ; cp ./build/pacman.html ./build/artifact/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
