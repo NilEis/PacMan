@@ -42,6 +42,11 @@ jobs:
           # The cache folder will be placed in the build directory,
           #  so make sure it doesn't conflict with anything!
           actions-cache-folder: 'emsdk-cache'
+      - name: restore cmake-cache
+        uses: actions/cache@v4
+        with:
+          path: ./build
+          key: ${{ runner.os }}-build_cache
       - name: configure
         run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
       - name: build
