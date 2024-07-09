@@ -36,6 +36,7 @@ jobs:
         with:
           # Make sure to set a version number!
           version: 3.1.61
+          actions-cache-folder: 'emsdk-cache'
       - name: restore cmake-cache
         uses: actions/cache@v4
         with:
