@@ -45,9 +45,9 @@ jobs:
           path: ./build
           key: ${{ runner.os }}-build_cache
       - name: configure
-        run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
+        run: source ./emsdk/emsdk_env.sh ; emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
       - name: build
-        run: emmake make -C ./build
+        run: source ./emsdk/emsdk_env.sh ; emmake make -C ./build
       - name: copy to artifact folder 
         run: mkdir ./build/artifact ; for file in ./build/pacman.*; do echo cp "$file" "${file/build/build\/artifact}";done
       - name: Upload artifact
