@@ -1,7 +1,22 @@
 cmake_minimum_required(VERSION 3.21) # Set the minimum required CMake version
 project(pacman C)
 
-function(add_source folder name)
+function(add_header path precompile_header)
+    get_filename_component(name "${path}" NAME)
+
+    list(APPEND HEADERS "${head_path}")
+    if (${precompile_header})
+        list(APPEND PRECOMPILED_HEADERS "${head_path}")
+        message(STATUS "Add header: ${name} - precompiled")
+    else (${precompile_header})
+        message(STATUS "Add header: ${name}")
+    endif (${precompile_header})
+
+    set(HEADERS ${HEADERS} PARENT_SCOPE)
+    set(PRECOMPILED_HEADERS ${PRECOMPILED_HEADERS} PARENT_SCOPE)
+endfunction(add_header)
+
+function(add_source folder name precompile_header)
     cmake_path(SET src_path_start NORMALIZE "${folder}/src/")
     cmake_path(SET head_path_start NORMALIZE "${folder}/include/")
 
@@ -9,10 +24,12 @@ function(add_source folder name)
     cmake_path(APPEND head_path "${head_path_start}" "${name}.h")
 
     list(APPEND SOURCES "${src_path}")
-    list(APPEND HEADERS "${head_path}")
+
+    add_header(${head_path} ${precompile_header})
 
     set(SOURCES ${SOURCES} PARENT_SCOPE)
     set(HEADERS ${HEADERS} PARENT_SCOPE)
+    set(PRECOMPILED_HEADERS ${PRECOMPILED_HEADERS} PARENT_SCOPE)
 endfunction(add_source)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
@@ -24,19 +41,23 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/generated/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/generated/include/assets.h)
 
-set(HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/nuklear_default.h)
+set(PRECOMPILED_HEADERS)
+
+set(HEADERS)
 
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c)
 
-add_source(${CMAKE_CURRENT_SOURCE_DIR} maps)
-add_source(${CMAKE_CURRENT_SOURCE_DIR} nk_util_functions)
-add_source(${CMAKE_CURRENT_SOURCE_DIR} int_vec2)
-add_source(${CMAKE_CURRENT_SOURCE_DIR} ghosts)
-add_source(${CMAKE_CURRENT_SOURCE_DIR} utils)
-add_source(${CMAKE_CURRENT_BINARY_DIR}/generated assets)
+add_header(${CMAKE_CURRENT_SOURCE_DIR}/include/defines.h true)
+add_header(${CMAKE_CURRENT_SOURCE_DIR}/include/trigger.h true)
+add_header(${CMAKE_CURRENT_SOURCE_DIR}/include/typedefs.h true)
+add_header(${CMAKE_CURRENT_SOURCE_DIR}/include/nuklear_default.h true)
+
+add_source(${CMAKE_CURRENT_SOURCE_DIR} maps true)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} nk_util_functions true)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} int_vec2 true)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} ghosts true)
+add_source(${CMAKE_CURRENT_SOURCE_DIR} utils true)
+add_source(${CMAKE_CURRENT_BINARY_DIR}/generated assets true)
 
 list(APPEND SOURCES ${HEADERS})
 message(STATUS "HEADERS: ${HEADERS}")
@@ -71,6 +92,7 @@ if (EMSCRIPTEN)
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMODULARIZE")
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -flto")
     set(${LINK_FLAGS} "${${LINK_FLAGS}} -sEXPORT_NAME=PacMan")
+    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sINVOKE_RUN=1")
     #set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM_ASYNC_COMPILATION")
     set(${LINK_FLAGS}
             "${${LINK_FLAGS}} --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html"
@@ -112,7 +134,7 @@ endif ()
 target_include_directories(
         ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE ${HEADERS})
+target_precompile_headers(${PROJECT_NAME} PRIVATE ${PRECOMPILED_HEADERS})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 

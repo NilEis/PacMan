@@ -14,4 +14,11 @@ bool try_move_and_set (const state_t *const state,
 
 void parse_map (state_t *state, const bool load_atlas);
 
+#ifdef UTILS_PRIVATE_FUNCS
+static double lerp (const double a, const double b, const double t)
+{
+    return b * (1.0f - t) + a * t;
+}
+#endif
+#undef UTILS_H
 #endif //UTILS_H

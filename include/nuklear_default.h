@@ -19,5 +19,5 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #include "nuklear.h"
-#undef PACMAN_NUKLEAR_DEFAULT_H // no idea why it does not work without undef
+#undef PACMAN_NUKLEAR_DEFAULT_H
 #endif // PACMAN_NUKLEAR_DEFAULT_H

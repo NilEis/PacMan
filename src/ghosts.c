@@ -1,4 +1,6 @@
 #include "ghosts.h"
+#include "trigger.h"
+#include "utils.h"
 #include <limits.h>
 
 static double lerp (const double a, const double b, const double t)

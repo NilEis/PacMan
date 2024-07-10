@@ -1,6 +1,6 @@
 #include "utils.h"
-#include "assets.h"
 #include "SDL3_image/SDL_image.h"
+#include "assets.h"
 #include <stdio.h>
 
 static int coords_to_map_index (const int y, const int x)
@@ -18,12 +18,14 @@ static bool test_cell (
             uint8_t r = 1;
             uint8_t g = 2;
             uint8_t b = 3;
+            const auto format_details
+                = SDL_GetPixelFormatDetails (map_surface->format);
             const auto pixel
                 = *(uint32_t *)((uint8_t *)map_surface->pixels
                                 + (y * TILE_HEIGHT + yp) * map_surface->pitch
                                 + (x * TILE_WIDTH + xp)
-                                      * map_surface->format->bytes_per_pixel);
-            SDL_GetRGB (pixel, map_surface->format, &r, &g, &b);
+                                      * format_details->bytes_per_pixel);
+            SDL_GetRGB (pixel, format_details, nullptr, &r, &g, &b);
             __attribute__ ((unused)) const auto i
                 = (int)r << 16 | (int)g << 8 | b;
             if (b != 0)

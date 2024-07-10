@@ -1,5 +1,4 @@
 #define NK_IMPLEMENTATION
-#define NK_PRIVATE
 #include "nuklear_default.h"
 #include "nk_util_functions.h"
 #include <SDL3/SDL_clipboard.h>

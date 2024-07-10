@@ -12,6 +12,7 @@
 #include "nk_util_functions.h"
 #include "trigger.h"
 #include "typedefs.h"
+#define UTILS_PRIVATE_FUNCS
 #include "utils.h"
 
 #ifdef __EMSCRIPTEN__
@@ -26,12 +27,6 @@
 
 #define add_bool_option(name)                                                 \
     nk_checkbox_label (&state->video.nuklear.ctx, #name, &state->options.name)
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-static double lerp (const double a, const double b, const double t)
-{
-    return b * (1.0f - t) + a * t;
-}
 
 bool event_key (const SDL_Event *event, state_t *state);
 static void resize_event (state_t *state, int width, int height);
@@ -132,8 +127,10 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
     {
         SDL_Log ("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError ());
     }
-    const int init_width = dm ? dm->w : WIDTH;
-    const int init_height = dm ? dm->h : HEIGHT;
+    const int init_width = argc < 2 ? dm ? dm->w : WIDTH : atoi (argv[1]);
+    const int init_height = argc < 2 ? dm ? dm->h : HEIGHT : atoi (argv[2]);
+    printf ("w: %s - %d\n", argv[1], init_width);
+    printf ("h: %s - %d\n", argv[2], init_height);
     state->video.sdl.window = SDL_CreateWindow (NAME,
         init_width,
         init_height,
