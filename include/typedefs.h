@@ -158,6 +158,7 @@ typedef struct
         nk_bool draw_targets;
         nk_bool draw_ghost_cell;
         nk_bool draw_pacman_cell;
+        nk_bool pause;
     } options;
 } state_t;
 

@@ -17,7 +17,8 @@ void parse_map (state_t *state, const bool load_atlas);
 #ifdef UTILS_PRIVATE_FUNCS
 static double lerp (const double a, const double b, const double t)
 {
-    return b * (1.0f - t) + a * t;
+    const auto t_d = t > 1.0f ? 1.0f : t < 0.0f ? 0.0f : t;
+    return b * (1.0f - t_d) + a * t_d;
 }
 #endif
 #undef UTILS_H

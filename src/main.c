@@ -129,8 +129,8 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
     }
     const int init_width = argc < 2 ? dm ? dm->w : WIDTH : atoi (argv[1]);
     const int init_height = argc < 2 ? dm ? dm->h : HEIGHT : atoi (argv[2]);
-    printf ("w: %s - %d\n", argv[1], init_width);
-    printf ("h: %s - %d\n", argv[2], init_height);
+    // printf ("w: %s - %d\n", argv[1], init_width);
+    // printf ("h: %s - %d\n", argv[2], init_height);
     state->video.sdl.window = SDL_CreateWindow (NAME,
         init_width,
         init_height,
@@ -311,7 +311,10 @@ int SDL_AppIterate (void *appstate)
     bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     state->delta = delta;
     state->last_ticks = SDL_GetTicks ();
-    state->tick++;
+    if (!state->options.pause)
+    {
+        state->tick++;
+    }
 
     update_ghosts (state);
 
@@ -407,7 +410,8 @@ int SDL_AppIterate (void *appstate)
             int y = state->pacman.position.y;
             double x_offset = 0;
             double y_offset = 0;
-            try_move_and_set (state, x, y, &x, &y, state->pacman.direction, false);
+            try_move_and_set (
+                state, x, y, &x, &y, state->pacman.direction, false);
             {
                 x_offset = (double)state->pacman.position.x
                          - lerp (state->pacman.position.x,
@@ -470,6 +474,7 @@ int SDL_AppIterate (void *appstate)
                 add_bool_option (draw_targets);
                 add_bool_option (draw_ghost_cell);
                 add_bool_option (draw_pacman_cell);
+                add_bool_option (pause);
             }
             nk_end (&state->video.nuklear.ctx);
             nk_render (state, NK_ANTI_ALIASING_ON);
@@ -547,6 +552,9 @@ bool event_key (const SDL_Event *event, state_t *state)
         break;
     case SDL_SCANCODE_K:
         trigger_start_after (state, &state->pacman.trigger.pacman_die, 1);
+        break;
+    case SDL_SCANCODE_P:
+        state->options.pause = !state->options.pause;
         break;
     case SDL_SCANCODE_F:
     {

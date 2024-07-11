@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21) # Set the minimum required CMake version
+cmake_minimum_required(VERSION 3.24) # Set the minimum required CMake version
 project(pacman C)
 
 function(add_header path precompile_header)
@@ -37,7 +37,6 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 include(FetchContent)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuklear.cmake)
 
 create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/generated/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/generated/include/assets.h)
 
@@ -114,7 +113,14 @@ FetchContent_Declare(sdl_image
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
         GIT_TAG origin/main)
 
-FetchContent_MakeAvailable(sdl sdl_image)
+FetchContent_Declare(nuklear
+        GIT_REPOSITORY https://github.com/Immediate-Mode-UI/Nuklear.git
+        GIT_TAG origin/master)
+
+FetchContent_MakeAvailable(sdl sdl_image nuklear)
+
+add_library(nuklear INTERFACE)
+target_include_directories(nuklear INTERFACE ${nuklear_SOURCE_DIR})
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

@@ -1,12 +1,8 @@
 #include "ghosts.h"
 #include "trigger.h"
+#define UTILS_PRIVATE_FUNCS
 #include "utils.h"
 #include <limits.h>
-
-static double lerp (const double a, const double b, const double t)
-{
-    return b * (1.0f - t) + a * t;
-}
 
 void update_ghosts (state_t *const state)
 {
@@ -97,7 +93,8 @@ void update_ghosts (state_t *const state)
                 }
                 int_vec2_t n_pos = { .x = state->ghosts.ghost[i].pos.x,
                     .y = state->ghosts.ghost[i].pos.y };
-                if (!try_move (state, &n_pos.x, &n_pos.y, direction_prio[d], true))
+                if (!try_move (
+                        state, &n_pos.x, &n_pos.y, direction_prio[d], true))
                 {
                     continue;
                 }
@@ -133,7 +130,8 @@ void draw_ghosts (state_t *const state)
         int y = state->ghosts.ghost[i].pos.y;
         double x_offset = 0;
         double y_offset = 0;
-        try_move_and_set (state, x, y, &x, &y, state->ghosts.ghost[i].dir, true);
+        try_move_and_set (
+            state, x, y, &x, &y, state->ghosts.ghost[i].dir, true);
         {
             x_offset = (double)state->ghosts.ghost[i].pos.x
                      - lerp (state->ghosts.ghost[i].pos.x,
@@ -199,8 +197,7 @@ void draw_ghosts (state_t *const state)
                 state->ghosts.ghost[i].color.b,
                 125);
             SDL_RenderFillRect (state->video.sdl.renderer,
-                &(SDL_FRect){
-                    .x = state->ghosts.ghost[i].pos.x * CELL_WIDTH,
+                &(SDL_FRect){ .x = state->ghosts.ghost[i].pos.x * CELL_WIDTH,
                     .y = state->ghosts.ghost[i].pos.y * CELL_HEIGHT,
                     .w = CELL_WIDTH,
                     .h = CELL_HEIGHT });
