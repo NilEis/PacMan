@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "SDL3_image/SDL_image.h"
 #include "assets.h"
+#include "maps.h"
 #include <stdio.h>
 
 static int coords_to_map_index (const int y, const int x)
@@ -8,7 +9,7 @@ static int coords_to_map_index (const int y, const int x)
     return y * (int)GRID_WIDTH + x;
 }
 
-static bool test_cell (
+static cell_type_t test_cell (
     const SDL_Surface *map_surface, const int y, const int x)
 {
     for (auto yp = 0; yp < TILE_HEIGHT; yp++)
@@ -30,20 +31,27 @@ static bool test_cell (
                 = (int)r << 16 | (int)g << 8 | b;
             if (b != 0)
             {
-                return true;
+                return CELL_WALL;
+            }
+            else if (b != 0 && r != 0)
+            {
+                return CELL_GHOST_WALL;
             }
         }
     }
-    return false;
+    return CELL_EMPTY;
 }
 
-bool try_move (
-    const state_t *const state, int *x, int *y, const direction_t direction)
+bool try_move (const state_t *const state,
+    int *x,
+    int *y,
+    const direction_t direction,
+    bool is_ghost)
 {
     int cx = 0;
     int cy = 0;
     bool res = false;
-    if (try_move_and_set (state, *x, *y, &cx, &cy, direction))
+    if (try_move_and_set (state, *x, *y, &cx, &cy, direction, is_ghost))
     {
         *x = cx;
         *y = cy;
@@ -57,7 +65,8 @@ bool try_move_and_set (const state_t *const state,
     const int y,
     int *out_x,
     int *out_y,
-    const direction_t direction)
+    const direction_t direction,
+    bool is_ghost)
 {
     auto cx = x;
     auto cy = y;
@@ -84,7 +93,8 @@ bool try_move_and_set (const state_t *const state,
     *out_x = cx;
     *out_y = cy;
     if (state->map[coords_to_map_index (cy, cx)] != CELL_WALL
-        && state->map[coords_to_map_index (cy, cx)] != CELL_GHOST_WALL)
+        && (is_ghost
+            || state->map[coords_to_map_index (cy, cx)] != CELL_GHOST_WALL))
     {
         res = true;
     }
@@ -118,10 +128,8 @@ void parse_map (state_t *state, const bool load_atlas)
     {
         for (auto x = 0; x < GRID_WIDTH; x++)
         {
-            if (test_cell (map_surface, y, x))
-            {
-                state->map[coords_to_map_index (y, x)] = CELL_WALL;
-            }
+            state->map[coords_to_map_index (y, x)]
+                = test_cell (map_surface, y, x);
         }
     }
     SDL_DestroySurface (full_asset_image);

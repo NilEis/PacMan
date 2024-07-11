@@ -55,7 +55,7 @@ static void init_state (state_t *state,
 
     for (auto i = 0; i < 4; i++)
     {
-        state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 13 + i, .y = 12 };
+        state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 12 + i, .y = 13 };
         state->ghosts.ghost[i].position_interp = 0;
         state->ghosts.ghost[i].trigger.move.ticks = GHOST_MOVE_TICKS;
         trigger_stop (&state->ghosts.ghost[i].trigger.move.trigger);
@@ -342,14 +342,14 @@ int SDL_AppIterate (void *appstate)
     {
         auto x = state->pacman.position.x;
         auto y = state->pacman.position.y;
-        if (try_move (state, &x, &y, state->pacman.next_direction))
+        if (try_move (state, &x, &y, state->pacman.next_direction, false))
         {
             state->pacman.direction = state->pacman.next_direction;
         }
         x = state->pacman.position.x;
         y = state->pacman.position.y;
         const auto direction = state->pacman.direction;
-        if (try_move (state, &x, &y, direction))
+        if (try_move (state, &x, &y, direction, false))
         {
             state->pacman.position.x = x;
             state->pacman.position.y = y;
@@ -407,7 +407,7 @@ int SDL_AppIterate (void *appstate)
             int y = state->pacman.position.y;
             double x_offset = 0;
             double y_offset = 0;
-            try_move_and_set (state, x, y, &x, &y, state->pacman.direction);
+            try_move_and_set (state, x, y, &x, &y, state->pacman.direction, false);
             {
                 x_offset = (double)state->pacman.position.x
                          - lerp (state->pacman.position.x,
