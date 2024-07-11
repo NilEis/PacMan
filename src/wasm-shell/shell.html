@@ -12,15 +12,17 @@
     <style>
         body {
             margin: 0;
-            width: 100vh;
-            height: 100vh;
         }
 
         canvas.emscripten {
-            border: 0 none;
-            background-color: black;
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            display: block;
         }
     </style>
 </head>
@@ -29,8 +31,8 @@
 <canvas class=emscripten id=canvas tabindex=-1
         onclick="/*document.getElementById('canvas').requestFullscreen()*/"></canvas>
 <br/>
-<p id="output">
-</p>
+<pre id="output">
+</pre>
 {{{ SCRIPT }}}
 <script async defer>
     window.onload = async () => {

@@ -160,6 +160,7 @@ typedef struct
         nk_bool draw_pacman_cell;
         nk_bool pause;
     } options;
+    FILE *buffer;
 } state_t;
 
 #endif // TYPEDEFS_H

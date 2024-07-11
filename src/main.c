@@ -109,11 +109,41 @@ static void init_state (state_t *state,
     }
 }
 
+static char *file_to_str (FILE *f, size_t *len)
+{
+    const auto pos = ftell (f);
+    fflush (stdout);
+    fseek (f, 0, SEEK_END);
+    const auto end = ftell (f);
+    rewind (f);
+    char *stdout_buf = calloc (end + 1, sizeof (char));
+    fread (stdout_buf, sizeof (char), end, f);
+    fseek (f, pos, SEEK_SET);
+    if (len != NULL)
+    {
+        *len = end;
+    }
+    return stdout_buf;
+}
+
 int SDL_AppInit (void **appstate, const int argc, char **argv)
 {
-    (void)argc;
-    (void)argv;
     state_t *state = calloc (1, sizeof (state_t));
+    state->buffer = fopen ("stdout.txt", "w+");
+    if (state->buffer == nullptr)
+    {
+        printf ("could not create stdout.txt\n");
+        goto error;
+    }
+    if (freopen ("stdout.txt", "a", stdout) == nullptr)
+    {
+        printf ("Could not reopen stdout\n");
+    }
+    printf ("arguments:\n");
+    for (auto i = 0; i < argc; i++)
+    {
+        printf ("    %d: %s\n", i, argv[i]);
+    }
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -477,6 +507,23 @@ int SDL_AppIterate (void *appstate)
                 add_bool_option (pause);
             }
             nk_end (&state->video.nuklear.ctx);
+            if (nk_begin (&state->video.nuklear.ctx,
+                    "stdout",
+                    (struct nk_rect){ 10, 320, 400, 300 },
+                    NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE
+                        | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
+            {
+                nk_layout_row_dynamic (&state->video.nuklear.ctx, 200, 1);
+                size_t len = 0;
+                char *b = file_to_str (state->buffer, &len);
+                nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
+                    NK_EDIT_BOX,
+                    b,
+                    len,
+                    nk_filter_default);
+                free (b);
+            }
+            nk_end (&state->video.nuklear.ctx);
             nk_render (state, NK_ANTI_ALIASING_ON);
         }
     }
@@ -529,6 +576,8 @@ void SDL_AppQuit (void *appstate)
     SDL_DestroyRenderer (state->video.sdl.renderer);
     SDL_DestroyWindow (state->video.sdl.window);
     nk_buffer_free (&state->video.nuklear.cmds);
+    fclose (state->buffer);
+    remove ("stdout.txt");
     free (state);
 }
 
