@@ -16,4 +16,4 @@ set(SDL_WERROR
         OFF
         CACHE BOOL "" FORCE)
 
-set(PACMAN_FPS 1 CACHE STRING "the fps of pacman")
+set(PACMAN_FPS 60 CACHE STRING "the fps of pacman")
