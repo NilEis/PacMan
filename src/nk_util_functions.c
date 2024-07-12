@@ -1,8 +1,13 @@
 #define NK_IMPLEMENTATION
-#include "nuklear_default.h"
 #include "nk_util_functions.h"
+#include "nuklear_default.h"
+#define UTILS_PRIVATE_FUNCS
+#include "utils.h"
 #include <SDL3/SDL_clipboard.h>
 #include <stdlib.h>
+
+#define add_bool_option(name)                                                 \
+    nk_checkbox_label (&state->video.nuklear.ctx, #name, &state->options.name)
 
 static int SDL_RenderGeometryRaw8BitColor (SDL_Renderer *renderer,
     SDL_Texture *texture,
@@ -356,4 +361,43 @@ int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
         break;
     }
     return 0;
+}
+
+void add_nuklear_windows (state_t *const state)
+{
+    if (nk_begin (&state->video.nuklear.ctx,
+            "debug",
+            (struct nk_rect){ 10, 10, 400, 300 },
+            NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_MINIMIZABLE
+                | NK_WINDOW_TITLE | NK_WINDOW_SCROLL_AUTO_HIDE))
+    {
+        nk_layout_row_dynamic (&state->video.nuklear.ctx, 30, 1);
+        add_bool_option (draw_targets);
+        add_bool_option (draw_ghost_cell);
+        add_bool_option (draw_pacman_cell);
+        add_bool_option (draw_map_overlay);
+        add_bool_option (pause);
+    }
+    nk_end (&state->video.nuklear.ctx);
+    if (nk_begin (&state->video.nuklear.ctx,
+            "stdout",
+            (struct nk_rect){ 10, 320, 400, 300 },
+            NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_MINIMIZABLE
+                | NK_WINDOW_TITLE))
+    {
+        nk_layout_row_dynamic (&state->video.nuklear.ctx,
+            nk_window_get_content_region_size (&state->video.nuklear.ctx).y
+                - 10,
+            1);
+        size_t len = 0;
+        char *b = file_to_str (state->buffer, &len);
+        nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
+            NK_EDIT_MULTILINE | NK_EDIT_SELECTABLE,
+            b,
+            len,
+            nk_filter_default);
+        free (b);
+    }
+    nk_end (&state->video.nuklear.ctx);
+    nk_render (state, NK_ANTI_ALIASING_ON);
 }

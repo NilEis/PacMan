@@ -15,4 +15,6 @@ void nk_sdl_handle_grab (state_t *state);
 
 int nk_sdl_handle_event (state_t *state, const SDL_Event *evt);
 
+void add_nuklear_windows (state_t *const state);
+
 #endif // NK_UTIL_FUNCTIONS_H

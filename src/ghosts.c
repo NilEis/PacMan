@@ -10,61 +10,72 @@ void update_ghosts (state_t *const state)
         = direction_to_vec (state->pacman.direction, true);
     for (auto i = 0; i < 4; i++)
     {
-        switch (i)
-        {
-        case GHOST_BLINKY:
-        {
-            state->ghosts.ghost[i].target.x = state->pacman.position.x;
-            state->ghosts.ghost[i].target.y = state->pacman.position.y;
-        }
-        break;
-        case GHOST_PINKY:
+        if (!state->ghosts.ghost[i].start_path.hit)
         {
             state->ghosts.ghost[i].target.x
-                = state->pacman.position.x + 4 * pacman_dir->x;
+                = state->ghosts.ghost[i].start_path.target.x;
             state->ghosts.ghost[i].target.y
-                = state->pacman.position.y + 4 * pacman_dir->y;
+                = state->ghosts.ghost[i].start_path.target.y;
         }
-        break;
-        case GHOST_INKY:
+        else
         {
-            const int_vec2_t pac_offset
-                = { .x = state->pacman.position.x + pacman_dir->x * 2,
-                      .y = state->pacman.position.y + pacman_dir->y * 2 };
-            const int_vec2_t blinky_to_pac_offset = {
-                .x = pac_offset.x - state->ghosts.ghost[GHOST_BLINKY].pos.x,
-                .y = pac_offset.y - state->ghosts.ghost[GHOST_BLINKY].pos.y
-            };
-            state->ghosts.ghost[i].target.x
-                = state->ghosts.ghost[GHOST_BLINKY].pos.x
-                + blinky_to_pac_offset.x * 2;
-            state->ghosts.ghost[i].target.y
-                = state->ghosts.ghost[GHOST_BLINKY].pos.y
-                + blinky_to_pac_offset.y * 2;
-        }
-        break;
-        case GHOST_CLYDE:
-        {
-            if (dist_squared (
-                    &state->ghosts.ghost[i].pos, &state->pacman.position)
-                >= 8 * 8)
+            switch (i)
             {
-                state->ghosts.ghost[i].target.x
-                    = state->ghosts.ghost[GHOST_BLINKY].target.x;
-                state->ghosts.ghost[i].target.y
-                    = state->ghosts.ghost[GHOST_BLINKY].target.y;
-            }
-            else
+            case GHOST_BLINKY:
             {
-                state->ghosts.ghost[i].target.x
-                    = state->ghosts.ghost[i].corner.x;
-                state->ghosts.ghost[i].target.y
-                    = state->ghosts.ghost[i].corner.y;
+                state->ghosts.ghost[i].target.x = state->pacman.position.x;
+                state->ghosts.ghost[i].target.y = state->pacman.position.y;
             }
-        }
-        break;
-        default:
             break;
+            case GHOST_PINKY:
+            {
+                state->ghosts.ghost[i].target.x
+                    = state->pacman.position.x + 4 * pacman_dir->x;
+                state->ghosts.ghost[i].target.y
+                    = state->pacman.position.y + 4 * pacman_dir->y;
+            }
+            break;
+            case GHOST_INKY:
+            {
+                const int_vec2_t pac_offset
+                    = { .x = state->pacman.position.x + pacman_dir->x * 2,
+                          .y = state->pacman.position.y + pacman_dir->y * 2 };
+                const int_vec2_t blinky_to_pac_offset = {
+                    .x
+                    = pac_offset.x - state->ghosts.ghost[GHOST_BLINKY].pos.x,
+                    .y = pac_offset.y - state->ghosts.ghost[GHOST_BLINKY].pos.y
+                };
+                state->ghosts.ghost[i].target.x
+                    = state->ghosts.ghost[GHOST_BLINKY].pos.x
+                    + blinky_to_pac_offset.x * 2;
+                state->ghosts.ghost[i].target.y
+                    = state->ghosts.ghost[GHOST_BLINKY].pos.y
+                    + blinky_to_pac_offset.y * 2;
+            }
+            break;
+            case GHOST_CLYDE:
+            {
+                if (dist_squared (
+                        &state->ghosts.ghost[i].pos, &state->pacman.position)
+                    >= 8 * 8)
+                {
+                    state->ghosts.ghost[i].target.x
+                        = state->ghosts.ghost[GHOST_BLINKY].target.x;
+                    state->ghosts.ghost[i].target.y
+                        = state->ghosts.ghost[GHOST_BLINKY].target.y;
+                }
+                else
+                {
+                    state->ghosts.ghost[i].target.x
+                        = state->ghosts.ghost[i].corner.x;
+                    state->ghosts.ghost[i].target.y
+                        = state->ghosts.ghost[i].corner.y;
+                }
+            }
+            break;
+            default:
+                break;
+            }
         }
         if (trigger_triggered (
                 state, &state->ghosts.ghost[i].trigger.move_between))
@@ -78,6 +89,13 @@ void update_ghosts (state_t *const state)
                 state, &state->ghosts.ghost[i].trigger.move.trigger))
         {
             state->ghosts.ghost[i].position_interp = 0;
+            if (state->ghosts.ghost[i].start_path.target.x
+                    == state->ghosts.ghost[i].pos.x
+                && state->ghosts.ghost[i].start_path.target.y
+                       == state->ghosts.ghost[i].pos.y)
+            {
+                state->ghosts.ghost[i].start_path.hit = true;
+            }
             constexpr direction_t direction_prio[4] = {
                 DIRECTION_UP, DIRECTION_LEFT, DIRECTION_DOWN, DIRECTION_RIGHT
             };
@@ -94,7 +112,7 @@ void update_ghosts (state_t *const state)
                 int_vec2_t n_pos = { .x = state->ghosts.ghost[i].pos.x,
                     .y = state->ghosts.ghost[i].pos.y };
                 if (!try_move (
-                        state, &n_pos.x, &n_pos.y, direction_prio[d], true))
+                        state, &n_pos.x, &n_pos.y, direction_prio[d], !state->ghosts.ghost[i].start_path.hit))
                 {
                     continue;
                 }
@@ -122,7 +140,7 @@ void update_ghosts (state_t *const state)
     }
 }
 
-void draw_ghosts (state_t *const state)
+void draw_ghosts (const state_t *const state)
 {
     for (auto i = 0; i < 4; i++)
     {
@@ -165,22 +183,22 @@ void draw_ghosts (state_t *const state)
                 state->ghosts.ghost[i].color.b,
                 125);
             SDL_RenderFillRect (state->video.sdl.renderer,
-                &(SDL_FRect){ .x = state->ghosts.ghost[i].pos.x * CELL_WIDTH,
-                    .y = state->ghosts.ghost[i].pos.y * CELL_HEIGHT,
+                &(SDL_FRect){ .x = state->ghosts.ghost[i].target.x * CELL_WIDTH,
+                    .y = state->ghosts.ghost[i].target.y * CELL_HEIGHT,
                     .w = CELL_WIDTH,
                     .h = CELL_HEIGHT });
             SDL_RenderLines (state->video.sdl.renderer,
                 (SDL_FPoint[]){
                     (SDL_FPoint){ state->ghosts.ghost[i].pos.x * CELL_WIDTH
-                                      - CELL_WIDTH / 2,
+                                      + CELL_WIDTH / 2,
                                  state->ghosts.ghost[i].pos.y * CELL_HEIGHT
                             + CELL_HEIGHT / 2 },
                     (SDL_FPoint){ state->ghosts.ghost[i].pos.x * CELL_WIDTH
-                                      - CELL_WIDTH / 2,
+                                      + CELL_WIDTH / 2,
                                  state->ghosts.ghost[i].target.y * CELL_HEIGHT
                             + CELL_HEIGHT / 2 },
                     (SDL_FPoint){ state->ghosts.ghost[i].target.x * CELL_WIDTH
-                                      - CELL_WIDTH / 2,
+                                      + CELL_WIDTH / 2,
                                  state->ghosts.ghost[i].target.y * CELL_HEIGHT
                             + CELL_HEIGHT / 2 }
             },

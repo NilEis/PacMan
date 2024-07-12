@@ -25,9 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define add_bool_option(name)                                                 \
-    nk_checkbox_label (&state->video.nuklear.ctx, #name, &state->options.name)
-
 bool event_key (const SDL_Event *event, state_t *state);
 static void resize_event (state_t *state, int width, int height);
 
@@ -38,7 +35,7 @@ static void init_state (state_t *state,
 {
     state->pacman.position.x = 1;
     state->pacman.position.y = 1;
-    state->pacman.position_interp = 0;
+    state->pacman.position_interp = PACMAN_MOVE_TICKS;
     state->pacman.dead = false;
     state->pacman.direction = DIRECTION_LEFT;
     state->pacman.next_direction = DIRECTION_NONE;
@@ -55,9 +52,11 @@ static void init_state (state_t *state,
 
     for (auto i = 0; i < 4; i++)
     {
-        state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 12 + i, .y = 13 };
-        state->ghosts.ghost[i].position_interp = 0;
+        state->ghosts.ghost[i].pos = (int_vec2_t){ .x = 12 + i, .y = 14 };
+        state->ghosts.ghost[i].position_interp = GHOST_MOVE_TICKS;
         state->ghosts.ghost[i].trigger.move.ticks = GHOST_MOVE_TICKS;
+        state->ghosts.ghost[i].start_path.hit = false;
+        state->ghosts.ghost[i].start_path.target = (int_vec2_t){ 15 - i, 11 };
         trigger_stop (&state->ghosts.ghost[i].trigger.move.trigger);
         trigger_stop (&state->ghosts.ghost[i].trigger.move_between);
     }
@@ -109,23 +108,6 @@ static void init_state (state_t *state,
     }
 }
 
-static char *file_to_str (FILE *f, size_t *len)
-{
-    const auto pos = ftell (f);
-    fflush (stdout);
-    fseek (f, 0, SEEK_END);
-    const auto end = ftell (f);
-    rewind (f);
-    char *stdout_buf = calloc (end + 1, sizeof (char));
-    fread (stdout_buf, sizeof (char), end, f);
-    fseek (f, pos, SEEK_SET);
-    if (len != NULL)
-    {
-        *len = end;
-    }
-    return stdout_buf;
-}
-
 int SDL_AppInit (void **appstate, const int argc, char **argv)
 {
     state_t *state = calloc (1, sizeof (state_t));
@@ -145,7 +127,7 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
         printf ("    %d: %s\n", i, argv[i]);
     }
 
-    printf("FPS: %d\n", FPS);
+    printf ("FPS: %d\n", FPS);
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -437,6 +419,39 @@ int SDL_AppIterate (void *appstate)
             state->video.sdl.sprites.atlas,
             &state->video.sdl.sprites.map.pos,
             NULL);
+        if (state->options.draw_map_overlay)
+        {
+            for (auto y = 0; y < (int)GRID_HEIGHT; y++)
+            {
+                for (auto x = 0; x < (int)GRID_WIDTH; x++)
+                {
+                    switch (state->map[coords_to_map_index (y, x)])
+                    {
+                    case CELL_EMPTY:
+                        SDL_SetRenderDrawColor (
+                            state->video.sdl.renderer, 100, 100, 100, 125);
+                        break;
+                    case CELL_WALL:
+                        SDL_SetRenderDrawColor (
+                            state->video.sdl.renderer, 0, 0, 255, 125);
+                        break;
+                    case CELL_COIN:
+                        SDL_SetRenderDrawColor (
+                            state->video.sdl.renderer, 255, 255, 0, 125);
+                        break;
+                    case CELL_GHOST_WALL:
+                        SDL_SetRenderDrawColor (
+                            state->video.sdl.renderer, 255, 100, 100, 125);
+                        break;
+                    }
+                    SDL_RenderFillRect (state->video.sdl.renderer,
+                        &(SDL_FRect){ .x = x * CELL_WIDTH,
+                            .y = y * CELL_HEIGHT,
+                            .w = CELL_WIDTH,
+                            .h = CELL_HEIGHT });
+                }
+            }
+        }
         {
             int x = state->pacman.position.x;
             int y = state->pacman.position.y;
@@ -495,40 +510,7 @@ int SDL_AppIterate (void *appstate)
             &state->video.sdl.target_rect);
 
         {
-            if (nk_begin (&state->video.nuklear.ctx,
-                    "debug",
-                    (struct nk_rect){ 10, 10, 400, 300 },
-                    NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE
-                        | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE
-                        | NK_WINDOW_SCROLL_AUTO_HIDE))
-            {
-                nk_layout_row_dynamic (&state->video.nuklear.ctx, 30, 1);
-                add_bool_option (draw_targets);
-                add_bool_option (draw_ghost_cell);
-                add_bool_option (draw_pacman_cell);
-                add_bool_option (pause);
-            }
-            nk_end (&state->video.nuklear.ctx);
-            if (nk_begin (&state->video.nuklear.ctx,
-                    "stdout",
-                    (struct nk_rect){ 10, 320, 400, 300 },
-                    NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE
-                        | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
-            {
-                nk_layout_row_dynamic (&state->video.nuklear.ctx,
-                    nk_window_get_content_region_size(&state->video.nuklear.ctx).y-10,
-                    1);
-                size_t len = 0;
-                char *b = file_to_str (state->buffer, &len);
-                nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
-                    NK_EDIT_BOX,
-                    b,
-                    len,
-                    nk_filter_default);
-                free (b);
-            }
-            nk_end (&state->video.nuklear.ctx);
-            nk_render (state, NK_ANTI_ALIASING_ON);
+            add_nuklear_windows (state);
         }
     }
     SDL_RenderPresent (state->video.sdl.renderer);

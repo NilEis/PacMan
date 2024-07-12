@@ -74,6 +74,11 @@ typedef struct
     direction_t dir;
     struct
     {
+        int_vec2_t target;
+        bool hit;
+    } start_path;
+    struct
+    {
         struct
         {
             trigger_t trigger;
@@ -158,6 +163,7 @@ typedef struct
         nk_bool draw_targets;
         nk_bool draw_ghost_cell;
         nk_bool draw_pacman_cell;
+        nk_bool draw_map_overlay;
         nk_bool pause;
     } options;
     FILE *buffer;

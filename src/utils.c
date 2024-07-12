@@ -1,13 +1,8 @@
+#define UTILS_PRIVATE_FUNCS
 #include "utils.h"
 #include "SDL3_image/SDL_image.h"
 #include "assets.h"
-#include "maps.h"
 #include <stdio.h>
-
-static int coords_to_map_index (const int y, const int x)
-{
-    return y * (int)GRID_WIDTH + x;
-}
 
 static cell_type_t test_cell (
     const SDL_Surface *map_surface, const int y, const int x)
@@ -29,13 +24,13 @@ static cell_type_t test_cell (
             SDL_GetRGB (pixel, format_details, nullptr, &r, &g, &b);
             __attribute__ ((unused)) const auto i
                 = (int)r << 16 | (int)g << 8 | b;
-            if (b != 0)
-            {
-                return CELL_WALL;
-            }
-            else if (b != 0 && r != 0)
+            if (r == 255)
             {
                 return CELL_GHOST_WALL;
+            }
+            if (b == 255)
+            {
+                return CELL_WALL;
             }
         }
     }
@@ -46,7 +41,7 @@ bool try_move (const state_t *const state,
     int *x,
     int *y,
     const direction_t direction,
-    bool is_ghost)
+    const bool is_ghost)
 {
     int cx = 0;
     int cy = 0;
@@ -66,7 +61,7 @@ bool try_move_and_set (const state_t *const state,
     int *out_x,
     int *out_y,
     const direction_t direction,
-    bool is_ghost)
+    const bool is_ghost)
 {
     auto cx = x;
     auto cy = y;
