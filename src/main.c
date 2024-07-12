@@ -145,6 +145,8 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
         printf ("    %d: %s\n", i, argv[i]);
     }
 
+    printf("FPS: %d\n", FPS);
+
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     if (result < 0)

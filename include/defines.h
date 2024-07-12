@@ -10,8 +10,11 @@
 #define GRID_RATIO (GRID_WIDTH / GRID_HEIGHT)
 #define GRID_RATIO_INV (1.0 / (GRID_WIDTH / GRID_HEIGHT))
 
+#ifndef FPS
 #define FPS (60.0)
-#define MS_PER_FRAME (1000.0 / FPS)
+#endif
+
+#define MS_PER_FRAME (1000.0f / (double)FPS)
 #define MS_TO_TICKS(ms) ((double)(ms) / MS_PER_FRAME)
 
 #define PACMAN_ANIMATION_TICKS (MS_TO_TICKS (64))

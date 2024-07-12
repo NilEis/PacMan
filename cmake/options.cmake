@@ -15,3 +15,5 @@ set(SDL3IMAGE_WERROR
 set(SDL_WERROR
         OFF
         CACHE BOOL "" FORCE)
+
+set(PACMAN_FPS 1 CACHE STRING "the fps of pacman")

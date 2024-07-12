@@ -141,6 +141,7 @@ target_include_directories(
         ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE ${PRECOMPILED_HEADERS})
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DFPS=${PACMAN_FPS})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
