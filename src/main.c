@@ -513,7 +513,9 @@ int SDL_AppIterate (void *appstate)
                     NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE
                         | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
             {
-                nk_layout_row_dynamic (&state->video.nuklear.ctx, 200, 1);
+                nk_layout_row_dynamic (&state->video.nuklear.ctx,
+                    nk_window_get_content_region_size(&state->video.nuklear.ctx).y-10,
+                    1);
                 size_t len = 0;
                 char *b = file_to_str (state->buffer, &len);
                 nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
