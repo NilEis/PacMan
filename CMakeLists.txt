@@ -2,34 +2,44 @@ cmake_minimum_required(VERSION 3.24) # Set the minimum required CMake version
 project(pacman C)
 
 function(add_header path precompile_header)
-    get_filename_component(name "${path}" NAME)
+  get_filename_component(name "${path}" NAME)
 
-    list(APPEND HEADERS "${head_path}")
-    if (${precompile_header})
-        list(APPEND PRECOMPILED_HEADERS "${head_path}")
-        message(STATUS "Add header: ${name} - precompiled")
-    else (${precompile_header})
-        message(STATUS "Add header: ${name}")
-    endif (${precompile_header})
+  list(APPEND HEADERS "${head_path}")
+  if(${precompile_header})
+    list(APPEND PRECOMPILED_HEADERS "${head_path}")
+    message(STATUS "Add header: ${name} - precompiled")
+  else(${precompile_header})
+    message(STATUS "Add header: ${name}")
+  endif(${precompile_header})
 
-    set(HEADERS ${HEADERS} PARENT_SCOPE)
-    set(PRECOMPILED_HEADERS ${PRECOMPILED_HEADERS} PARENT_SCOPE)
+  set(HEADERS
+      ${HEADERS}
+      PARENT_SCOPE)
+  set(PRECOMPILED_HEADERS
+      ${PRECOMPILED_HEADERS}
+      PARENT_SCOPE)
 endfunction(add_header)
 
 function(add_source folder name precompile_header)
-    cmake_path(SET src_path_start NORMALIZE "${folder}/src/")
-    cmake_path(SET head_path_start NORMALIZE "${folder}/include/")
+  cmake_path(SET src_path_start NORMALIZE "${folder}/src/")
+  cmake_path(SET head_path_start NORMALIZE "${folder}/include/")
 
-    cmake_path(APPEND src_path "${src_path_start}" "${name}.c")
-    cmake_path(APPEND head_path "${head_path_start}" "${name}.h")
+  cmake_path(APPEND src_path "${src_path_start}" "${name}.c")
+  cmake_path(APPEND head_path "${head_path_start}" "${name}.h")
 
-    list(APPEND SOURCES "${src_path}")
+  list(APPEND SOURCES "${src_path}")
 
-    add_header(${head_path} ${precompile_header})
+  add_header(${head_path} ${precompile_header})
 
-    set(SOURCES ${SOURCES} PARENT_SCOPE)
-    set(HEADERS ${HEADERS} PARENT_SCOPE)
-    set(PRECOMPILED_HEADERS ${PRECOMPILED_HEADERS} PARENT_SCOPE)
+  set(SOURCES
+      ${SOURCES}
+      PARENT_SCOPE)
+  set(HEADERS
+      ${HEADERS}
+      PARENT_SCOPE)
+  set(PRECOMPILED_HEADERS
+      ${PRECOMPILED_HEADERS}
+      PARENT_SCOPE)
 endfunction(add_source)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
@@ -38,7 +48,10 @@ include(FetchContent)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/options.cmake)
 
-create_resources(${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_" ${CMAKE_CURRENT_BINARY_DIR}/generated/src/assets.c ${CMAKE_CURRENT_BINARY_DIR}/generated/include/assets.h)
+create_resources(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/assets "asset_"
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/src/assets.c
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/include/assets.h)
 
 set(PRECOMPILED_HEADERS)
 
@@ -62,60 +75,60 @@ list(APPEND SOURCES ${HEADERS})
 message(STATUS "HEADERS: ${HEADERS}")
 message(STATUS "SOURCES: ${SOURCES}")
 
+if(EMSCRIPTEN)
+  # set(SUPPORT_CLANGD OFF CACHE BOOL "" FORCE)
+  set(PLATFORM
+      "Web"
+      CACHE STRING "" FORCE)
+  # remove --closure-args="--compilation_level SIMPLE" when
+  # https://github.com/emscripten-core/emscripten/issues/16706 is fixed
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --no-heap-copy")
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
-if (EMSCRIPTEN)
-    set(SUPPORT_CLANGD
-            OFF
-            CACHE BOOL "" FORCE)
-    set(PLATFORM
-            "Web"
-            CACHE STRING "" FORCE)
-    # remove --closure-args="--compilation_level SIMPLE" when
-    # https://github.com/emscripten-core/emscripten/issues/16706 is fixed
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --no-heap-copy")
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  set(LINK_FLAGS CMAKE_EXE_LINKER_FLAGS)
 
-    set(LINK_FLAGS CMAKE_EXE_LINKER_FLAGS)
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sGL_ENABLE_GET_PROC_ADDRESS")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM=1")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMINIFY_HTML=1")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sENVIRONMENT=web")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sFILESYSTEM=1")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sALLOW_MEMORY_GROWTH=1")
+  set(${LINK_FLAGS}
+      "${${LINK_FLAGS}} --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/pre.js"
+  )
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} --closure 0")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMODULARIZE")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -flto")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sEXPORT_NAME=PacMan")
+  set(${LINK_FLAGS} "${${LINK_FLAGS}} -sINVOKE_RUN=1")
+  # set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM_ASYNC_COMPILATION")
+  set(${LINK_FLAGS}
+      "${${LINK_FLAGS}} --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html"
+  )
 
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sGL_ENABLE_GET_PROC_ADDRESS")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM=1")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMINIFY_HTML=1")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sENVIRONMENT=web")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sFILESYSTEM=1")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sALLOW_MEMORY_GROWTH=1")
-    set(${LINK_FLAGS}
-            "${${LINK_FLAGS}} --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/pre.js"
-    )
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} --closure 0")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sMODULARIZE")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -flto")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sEXPORT_NAME=PacMan")
-    set(${LINK_FLAGS} "${${LINK_FLAGS}} -sINVOKE_RUN=1")
-    #set(${LINK_FLAGS} "${${LINK_FLAGS}} -sWASM_ASYNC_COMPILATION")
-    set(${LINK_FLAGS}
-            "${${LINK_FLAGS}} --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html"
-    )
+  # Remove the -rdynamic flag because otherwise emscripten does not generate
+  # HTML+JS+WASM files, only a non-working and fat HTML
+  string(REPLACE "-rdynamic" "" CMAKE_SHARED_LIBRARY_LINK_C_FLAGS
+                 "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
+endif()
 
-    # Remove the -rdynamic flag because otherwise emscripten does not generate
-    # HTML+JS+WASM files, only a non-working and fat HTML
-    string(REPLACE "-rdynamic" "" CMAKE_SHARED_LIBRARY_LINK_C_FLAGS
-            "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
-endif ()
+FetchContent_Declare(
+  sdl
+  GIT_SHALLOW TRUE
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+  GIT_TAG origin/main)
 
-FetchContent_Declare(sdl
-        GIT_SHALLOW TRUE
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG origin/main)
+FetchContent_Declare(
+  sdl_image
+  GIT_SHALLOW TRUE
+  GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+  GIT_TAG origin/main)
 
-FetchContent_Declare(sdl_image
-        GIT_SHALLOW TRUE
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-        GIT_TAG origin/main)
-
-FetchContent_Declare(nuklear
-        GIT_REPOSITORY https://github.com/Immediate-Mode-UI/Nuklear.git
-        GIT_TAG origin/master)
+FetchContent_Declare(
+  nuklear
+  GIT_REPOSITORY https://github.com/Immediate-Mode-UI/Nuklear.git
+  GIT_TAG origin/master)
 
 FetchContent_MakeAvailable(sdl sdl_image nuklear)
 
@@ -127,28 +140,23 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} SDL3::SDL3 SDL3_image::SDL3_image nuklear)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NAME="${PROJECT_NAME}")
 
-if (EMSCRIPTEN)
-    set_target_properties(
-            ${PROJECT_NAME}
-            PROPERTIES LINK_DEPENDS
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html)
-    set_target_properties(
-            ${PROJECT_NAME}
-            PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/pre.js)
-endif ()
+if(EMSCRIPTEN)
+  set_target_properties(
+    ${PROJECT_NAME}
+    PROPERTIES LINK_DEPENDS
+               ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/shell.html)
+  set_target_properties(
+    ${PROJECT_NAME}
+    PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/wasm-shell/pre.js)
+endif()
 
 target_include_directories(
-        ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
+  ${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+                         ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE ${PRECOMPILED_HEADERS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DFPS=${PACMAN_FPS})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
-option(SUPPORT_CLANGD "Support clangd" ON)
-if (SUPPORT_CLANGD)
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-    set(CLANGD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/cmake/.clangd.in)
-    set(CLANGD_DEST ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
-    configure_file(${CLANGD_SRC} ${CLANGD_DEST} @ONLY)
-endif ()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/create_clangd.cmake)

@@ -51,7 +51,7 @@ jobs:
           path: ./build
           key: ${{ runner.os }}-build_cache
       - name: configure
-        run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release
+        run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release -DSUPPORT_CLANGD=OFF
       - name: build
         run: emmake make -C ./build -j
       - name: copy to artifact folder 
