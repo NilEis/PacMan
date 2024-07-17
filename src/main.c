@@ -111,15 +111,14 @@ static void init_state (state_t *state,
 int SDL_AppInit (void **appstate, const int argc, char **argv)
 {
     state_t *state = calloc (1, sizeof (state_t));
-    state->buffer = fopen ("stdout.txt", "w+");
-    if (state->buffer == nullptr)
-    {
-        printf ("could not create stdout.txt\n");
-        goto error;
-    }
-    if (freopen ("stdout.txt", "a", stdout) == nullptr)
+    memset (state->buffer, 0, STDOUT_BUF_SIZE);
+    if (freopen (STDOUT_REOPEN_NAME, "a", stdout) == nullptr)
     {
         printf ("Could not reopen stdout\n");
+    }
+    if (setvbuf (stdout, state->buffer, _IOFBF, STDOUT_BUF_SIZE))
+    {
+        perror ("setvbuf");
     }
     printf ("arguments:\n");
     for (auto i = 0; i < argc; i++)
@@ -321,10 +320,10 @@ int SDL_AppIterate (void *appstate)
 {
     const auto state = (state_t *)appstate;
     const auto delta = SDL_GetTicks () - state->last_ticks;
-    struct nk_colorf bg;
-    bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     state->delta = delta;
     state->last_ticks = SDL_GetTicks ();
+    struct nk_colorf bg;
+    bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
     if (!state->options.pause)
     {
         state->tick++;
@@ -514,9 +513,9 @@ int SDL_AppIterate (void *appstate)
         }
     }
     SDL_RenderPresent (state->video.sdl.renderer);
-    while (SDL_GetTicks () - state->last_ticks < MS_PER_FRAME)
-    {
-    }
+    const double rest_of_timeslice
+        = MS_PER_FRAME - (SDL_GetTicks () - state->last_ticks);
+    SDL_Delay (rest_of_timeslice * (rest_of_timeslice >= 0.0));
     return SDL_APP_CONTINUE;
 }
 
@@ -562,8 +561,6 @@ void SDL_AppQuit (void *appstate)
     SDL_DestroyRenderer (state->video.sdl.renderer);
     SDL_DestroyWindow (state->video.sdl.window);
     nk_buffer_free (&state->video.nuklear.cmds);
-    fclose (state->buffer);
-    remove ("stdout.txt");
     free (state);
 }
 

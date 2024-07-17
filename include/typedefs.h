@@ -166,7 +166,7 @@ typedef struct
         nk_bool draw_map_overlay;
         nk_bool pause;
     } options;
-    FILE *buffer;
+    char buffer[STDOUT_BUF_SIZE];
 } state_t;
 
 #endif // TYPEDEFS_H

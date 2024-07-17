@@ -389,14 +389,11 @@ void add_nuklear_windows (state_t *const state)
             nk_window_get_content_region_size (&state->video.nuklear.ctx).y
                 - 10,
             1);
-        size_t len = 0;
-        char *b = file_to_str (state->buffer, &len);
         nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
             NK_EDIT_MULTILINE | NK_EDIT_SELECTABLE,
-            b,
-            len,
+            state->buffer,
+            STDOUT_BUF_SIZE-1,
             nk_filter_default);
-        free (b);
     }
     nk_end (&state->video.nuklear.ctx);
     nk_render (state, NK_ANTI_ALIASING_ON);

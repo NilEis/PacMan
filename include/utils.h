@@ -31,22 +31,7 @@ static double lerp (const double a, const double b, const double t)
     const auto t_d = t > 1.0f ? 1.0f : t < 0.0f ? 0.0f : t;
     return b * (1.0f - t_d) + a * t_d;
 }
-static char *file_to_str (FILE *f, size_t *len)
-{
-    const auto pos = ftell (f);
-    fflush (stdout);
-    fseek (f, 0, SEEK_END);
-    const auto end = ftell (f);
-    rewind (f);
-    char *stdout_buf = calloc (end + 1, sizeof (char));
-    fread (stdout_buf, sizeof (char), end, f);
-    fseek (f, pos, SEEK_SET);
-    if (len != NULL)
-    {
-        *len = end;
-    }
-    return stdout_buf;
-}
+
 #endif
 #undef UTILS_H
 #endif // UTILS_H
