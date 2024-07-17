@@ -161,18 +161,18 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/create_clangd.cmake)
 
-get_all_targets(all_targets ${CMAKE_CURRENT_SOURCE_DIR})
-include(ProcessorCount)
-ProcessorCount(N)
-foreach (t ${all_targets})
-    get_target_property(t_sources ${t} SOURCES)
-    list(LENGTH t_sources len)
-    math(EXPR batch_size "${len} / ${N}" OUTPUT_FORMAT DECIMAL)
-    if (${batch_size} LESS 1)
-        set(batch_size 1)
-    endif ()
-    message(STATUS "${t}: ${batch_size} = ${len} / ${N}")
-    set_target_properties(${t} PROPERTIES
-            UNITY_BUILD_MODE BATCH
-            UNITY_BUILD_BATCH_SIZE batch_size)
-endforeach ()
+# get_all_targets(all_targets ${CMAKE_CURRENT_SOURCE_DIR})
+# include(ProcessorCount)
+# ProcessorCount(N)
+# foreach (t ${all_targets})
+#     get_target_property(t_sources ${t} SOURCES)
+#     list(LENGTH t_sources len)
+#     math(EXPR batch_size "${len} / ${N}" OUTPUT_FORMAT DECIMAL)
+#     if (${batch_size} LESS 1)
+#         set(batch_size 1)
+#     endif ()
+#     message(STATUS "${t}: ${batch_size} = ${len} / ${N}")
+#     set_target_properties(${t} PROPERTIES
+#             UNITY_BUILD_MODE BATCH
+#             UNITY_BUILD_BATCH_SIZE batch_size)
+# endforeach ()

@@ -32,12 +32,6 @@ if (SUPPORT_CLANGD)
         foreach (t ${all_targets})
             get_target_property(t_sources ${t} SOURCES)
             get_target_property(t_source_dir ${t} SOURCE_DIR)
-            list(LENGTH t_sources len)
-            math(EXPR batch_size "${len} / ${N}" OUTPUT_FORMAT DECIMAL)
-            message(STATUS "${batch_size} = ${len} / ${N}")
-            set_target_properties(${t} PROPERTIES
-                    UNITY_BUILD_MODE BATCH
-                    UNITY_BUILD_BATCH_SIZE batch_size)
             foreach (s ${t_sources})
                 file(REAL_PATH "${s}" s BASE_DIRECTORY "${t_source_dir}")
                 message(STATUS "${s}: add_compile_command in ${t_source_dir}")
