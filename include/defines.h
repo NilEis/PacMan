@@ -2,7 +2,7 @@
 #define DEFINES_H
 #include <stdio.h>
 
-#define STDOUT_BUF_SIZE (BUFSIZ)
+#define STDOUT_BUF_SIZE (1024)
 #if defined(__unix__) || defined(__EMSCRIPTEN__)
 #define STDOUT_REOPEN_NAME "/dev/null"
 #elif defined(_WIN32) || defined(WIN32)

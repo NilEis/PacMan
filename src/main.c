@@ -120,6 +120,7 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
     {
         perror ("setvbuf");
     }
+    printf ("stdout buf size: %d\n", STDOUT_BUF_SIZE);
     printf ("arguments:\n");
     for (auto i = 0; i < argc; i++)
     {
