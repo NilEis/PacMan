@@ -115,12 +115,12 @@ int SDL_AppInit (void **appstate, const int argc, char **argv)
     if (freopen (STDOUT_REOPEN_NAME, "a", stdout) == nullptr)
     {
         printf ("Could not reopen stdout\n");
-        return -1;
+        goto error;
     }
     if (setvbuf (stdout, state->buffer, _IOFBF, STDOUT_BUF_SIZE))
     {
         perror ("setvbuf");
-        return -1;
+        goto error;
     }
     printf ("stdout buf size: %d\n", STDOUT_BUF_SIZE);
     printf ("arguments:\n");
