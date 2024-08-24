@@ -1,6 +1,7 @@
 env:
   EM_VERSION: 3.1.61
   EM_CACHE_FOLDER: './emsdk-cache'
+  CPM_SOURCE_CACHE: '~/cpm-cache'
 # Simple workflow for deploying static content to GitHub Pages
 name: Deploy static content to Pages
 
@@ -38,7 +39,9 @@ jobs:
         id: cache-system-libraries
         uses: actions/cache@v2
         with:
-          path: ${{env.EM_CACHE_FOLDER}}
+          path: |
+            ${{env.EM_CACHE_FOLDER}}
+            ~/cpm-cache
           key: ${{env.EM_VERSION}}-${{ runner.os }}
       - name: restore emsdk
         uses: mymindstorm/setup-emsdk@v14
