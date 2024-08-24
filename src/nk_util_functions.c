@@ -186,13 +186,13 @@ void nk_sdl_handle_grab (state_t *state)
     struct nk_context *ctx = &state->video.nuklear.ctx;
     if (ctx->input.mouse.grab)
     {
-        SDL_SetRelativeMouseMode (SDL_TRUE);
+        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, SDL_TRUE);
     }
     else if (ctx->input.mouse.ungrab)
     {
         /* better support for older SDL by setting mode first; causes an extra
          * mouse motion event */
-        SDL_SetRelativeMouseMode (SDL_FALSE);
+        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, SDL_FALSE);
         SDL_WarpMouseInWindow (state->video.sdl.window,
             (int)ctx->input.mouse.prev.x,
             (int)ctx->input.mouse.prev.y);
@@ -392,7 +392,7 @@ void add_nuklear_windows (state_t *const state)
         nk_edit_string_zero_terminated (&state->video.nuklear.ctx,
             NK_EDIT_MULTILINE | NK_EDIT_SELECTABLE,
             state->buffer,
-            STDOUT_BUF_SIZE-1,
+            STDOUT_BUF_SIZE - 1,
             nk_filter_default);
     }
     nk_end (&state->video.nuklear.ctx);

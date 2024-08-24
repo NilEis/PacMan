@@ -113,27 +113,25 @@ if (EMSCRIPTEN)
             "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
 endif ()
 
-FetchContent_Declare(
-        sdl
-        GIT_SHALLOW TRUE
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG origin/main)
+file(DOWNLOAD
+        https://github.com/cpm-cmake/CPM.cmake/releases/latest/download/CPM.cmake
+        ${CMAKE_BINARY_DIR}/CPM.cmake)
+include(${CMAKE_BINARY_DIR}/CPM.cmake)
 
-FetchContent_Declare(
-        sdl_image
-        GIT_SHALLOW TRUE
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-        GIT_TAG origin/main)
+cpmaddpackage("gh:libsdl-org/SDL#main")
 
-FetchContent_Declare(
-        nuklear
-        GIT_REPOSITORY https://github.com/Immediate-Mode-UI/Nuklear.git
-        GIT_TAG origin/master)
+cpmaddpackage("gh:libsdl-org/SDL_image#main")
 
-FetchContent_MakeAvailable(sdl sdl_image nuklear)
+CPMAddPackage(
+        NAME CPMLicenses.cmake
+        GITHUB_REPOSITORY cpm-cmake/CPMLicenses.cmake
+        VERSION 0.0.7
+)
+
+cpmaddpackage(NAME nuklear_package GITHUB_REPOSITORY Immediate-Mode-UI/Nuklear GIT_TAG master DOWNLOAD_ONLY YES)
 
 add_library(nuklear INTERFACE)
-target_include_directories(nuklear INTERFACE ${nuklear_SOURCE_DIR})
+target_include_directories(nuklear INTERFACE ${nuklear_package_SOURCE_DIR})
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -159,20 +157,24 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE -DFPS=${PACMAN_FPS})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
+if (EMSCRIPTEN)
+    add_custom_command(
+            TARGET ${PROJECT_NAME}
+            POST_BUILD
+            COMMAND
+            emrun $<TARGET_FILE:${PROJECT_NAME}>)
+endif ()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/create_clangd.cmake)
 
+cpm_licenses_create_disclaimer_target(
+        write-licenses "${CMAKE_CURRENT_BINARY_DIR}/third_party.txt" "${CPM_PACKAGES}"
+)
+
 # get_all_targets(all_targets ${CMAKE_CURRENT_SOURCE_DIR})
-# include(ProcessorCount)
-# ProcessorCount(N)
-# foreach (t ${all_targets})
-#     get_target_property(t_sources ${t} SOURCES)
-#     list(LENGTH t_sources len)
-#     math(EXPR batch_size "${len} / ${N}" OUTPUT_FORMAT DECIMAL)
-#     if (${batch_size} LESS 1)
-#         set(batch_size 1)
-#     endif ()
-#     message(STATUS "${t}: ${batch_size} = ${len} / ${N}")
-#     set_target_properties(${t} PROPERTIES
-#             UNITY_BUILD_MODE BATCH
-#             UNITY_BUILD_BATCH_SIZE batch_size)
-# endforeach ()
+# include(ProcessorCount) ProcessorCount(N) foreach (t ${all_targets})
+# get_target_property(t_sources ${t} SOURCES) list(LENGTH t_sources len)
+# math(EXPR batch_size "${len} / ${N}" OUTPUT_FORMAT DECIMAL) if (${batch_size}
+# LESS 1) set(batch_size 1) endif () message(STATUS "${t}: ${batch_size} =
+# ${len} / ${N}") set_target_properties(${t} PROPERTIES UNITY_BUILD_MODE BATCH
+# UNITY_BUILD_BATCH_SIZE batch_size) endforeach ()

@@ -108,7 +108,7 @@ static void init_state (state_t *state,
     }
 }
 
-int SDL_AppInit (void **appstate, const int argc, char **argv)
+SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
 {
     state_t *state = calloc (1, sizeof (state_t));
     memset (state->buffer, 0, STDOUT_BUF_SIZE);
@@ -319,7 +319,7 @@ error:
     return -1;
 }
 
-int SDL_AppIterate (void *appstate)
+SDL_AppResult SDL_AppIterate (void *appstate)
 {
     const auto state = (state_t *)appstate;
     const auto delta = SDL_GetTicks () - state->last_ticks;
@@ -522,7 +522,7 @@ int SDL_AppIterate (void *appstate)
     return SDL_APP_CONTINUE;
 }
 
-int SDL_AppEvent (void *appstate, const SDL_Event *event)
+SDL_AppResult SDL_AppEvent (void *appstate, const SDL_Event *event)
 {
     state_t *state = appstate;
     nk_input_begin (&state->video.nuklear.ctx);
