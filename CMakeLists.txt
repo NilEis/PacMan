@@ -157,14 +157,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE -DFPS=${PACMAN_FPS})
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 23)
 
-if (EMSCRIPTEN)
-    add_custom_command(
-            TARGET ${PROJECT_NAME}
-            POST_BUILD
-            COMMAND
-            emrun $<TARGET_FILE:${PROJECT_NAME}>)
-endif ()
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/create_clangd.cmake)
 
 cpm_licenses_create_disclaimer_target(
