@@ -133,7 +133,7 @@ SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-    if (result < 0)
+    if (result == SDL_FALSE)
     {
         goto error;
     }
@@ -522,7 +522,7 @@ SDL_AppResult SDL_AppIterate (void *appstate)
     return SDL_APP_CONTINUE;
 }
 
-SDL_AppResult SDL_AppEvent (void *appstate, const SDL_Event *event)
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     state_t *state = appstate;
     nk_input_begin (&state->video.nuklear.ctx);
