@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.24) # Set the minimum required CMake version
 project(pacman C)
+
+set(SDL_LIBC OFF)
+
 function(add_header path precompile_header)
     get_filename_component(name "${path}" NAME)
 
