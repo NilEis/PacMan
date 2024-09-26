@@ -4,6 +4,7 @@
 #include "defines.h"
 #include "nuklear_default.h"
 
+#include <SDL3/SDL_oldnames.h>
 #include <stdint.h>
 
 typedef enum
@@ -118,7 +119,7 @@ typedef struct
             int width;
             int height;
             SDL_FRect target_rect;
-            SDL_bool bordered;
+            bool bordered;
         } sdl;
         struct
         {

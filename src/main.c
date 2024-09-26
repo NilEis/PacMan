@@ -133,7 +133,7 @@ SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
 
     *appstate = state;
     const auto result = SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-    if (result == SDL_FALSE)
+    if (result == false)
     {
         goto error;
     }
@@ -156,7 +156,7 @@ SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
         goto error;
     }
 
-    SDL_SetWindowFullscreen (state->video.sdl.window, SDL_TRUE);
+    SDL_SetWindowFullscreen (state->video.sdl.window, true);
     state->video.sdl.renderer
         = SDL_CreateRenderer (state->video.sdl.window, nullptr);
     if (state->video.sdl.renderer == nullptr)

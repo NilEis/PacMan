@@ -100,7 +100,7 @@ void parse_map (state_t *state, const bool load_atlas)
 {
     SDL_IOStream *file = SDL_IOFromConstMem (
         asset_general_sprites_png, asset_general_sprites_png_size);
-    SDL_Surface *full_asset_image = IMG_LoadTyped_IO (file, SDL_TRUE, "PNG");
+    SDL_Surface *full_asset_image = IMG_LoadTyped_IO (file, true, "PNG");
     if (load_atlas)
         state->video.sdl.sprites.atlas = SDL_CreateTextureFromSurface (
             state->video.sdl.renderer, full_asset_image);

@@ -68,7 +68,7 @@ static int SDL_RenderGeometryRaw8BitColor (SDL_Renderer *renderer,
 void nk_render (state_t *state, const enum nk_anti_aliasing AA)
 {
     SDL_Rect saved_clip;
-    const SDL_bool clipping_enabled
+    const bool clipping_enabled
         = SDL_RenderClipEnabled (state->video.sdl.renderer);
 
     const struct nk_draw_command *cmd;
@@ -186,13 +186,13 @@ void nk_sdl_handle_grab (state_t *state)
     struct nk_context *ctx = &state->video.nuklear.ctx;
     if (ctx->input.mouse.grab)
     {
-        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, SDL_TRUE);
+        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, true);
     }
     else if (ctx->input.mouse.ungrab)
     {
         /* better support for older SDL by setting mode first; causes an extra
          * mouse motion event */
-        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, SDL_FALSE);
+        SDL_SetWindowRelativeMouseMode (state->video.sdl.window, false);
         SDL_WarpMouseInWindow (state->video.sdl.window,
             (int)ctx->input.mouse.prev.x,
             (int)ctx->input.mouse.prev.y);
