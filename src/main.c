@@ -274,7 +274,7 @@ SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
     }
 
     {
-        nk_init_default (&state->video.nuklear.ctx, NULL);
+        nk_init_default (&state->video.nuklear.ctx, nullptr);
         nk_font_atlas_init_default (&state->video.nuklear.atlas);
         nk_font_atlas_begin (&state->video.nuklear.atlas);
         const struct nk_font_config config = nk_font_config (0);
@@ -420,7 +420,7 @@ SDL_AppResult SDL_AppIterate (void *appstate)
         SDL_RenderTexture (state->video.sdl.renderer,
             state->video.sdl.sprites.atlas,
             &state->video.sdl.sprites.map.pos,
-            NULL);
+            nullptr);
         if (state->options.draw_map_overlay)
         {
             for (auto y = 0; y < (int)GRID_HEIGHT; y++)
@@ -502,13 +502,13 @@ SDL_AppResult SDL_AppIterate (void *appstate)
 
         draw_ghosts (state);
     }
-    SDL_SetRenderTarget (state->video.sdl.renderer, NULL);
+    SDL_SetRenderTarget (state->video.sdl.renderer, nullptr);
     {
         SDL_SetRenderDrawColor (state->video.sdl.renderer, 0, 0, 0, 0);
         SDL_RenderClear (state->video.sdl.renderer);
         SDL_RenderTexture (state->video.sdl.renderer,
             state->video.sdl.framebuffer_texture,
-            NULL,
+            nullptr,
             &state->video.sdl.target_rect);
 
         {

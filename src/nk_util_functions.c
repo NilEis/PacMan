@@ -215,7 +215,7 @@ int nk_sdl_handle_event (state_t *state, const SDL_Event *evt)
     case SDL_EVENT_KEY_DOWN:
     {
         const int down = evt->type == SDL_EVENT_KEY_DOWN;
-        const Uint8 *key_state = SDL_GetKeyboardState (nullptr);
+        const bool *key_state = SDL_GetKeyboardState (nullptr);
         switch (evt->key.key)
         {
         case SDLK_RSHIFT: /* RSHIFT & LSHIFT share same routine */
