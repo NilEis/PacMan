@@ -48,11 +48,6 @@ jobs:
         with:
           version: ${{env.EM_VERSION}}
           actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
-      - name: restore cmake-cache
-        uses: actions/cache@v4
-        with:
-          path: ./build
-          key: ${{ runner.os }}-build_cache
       - name: configure
         run: emcmake cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release -DSUPPORT_CLANGD=OFF
       - name: build
