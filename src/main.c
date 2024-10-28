@@ -111,6 +111,7 @@ static void init_state (state_t *state,
 SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
 {
     state_t *state = calloc (1, sizeof (state_t));
+#ifdef REROUTE_STDOUT
     memset (state->buffer, 0, STDOUT_BUF_SIZE);
     if (freopen (STDOUT_REOPEN_NAME, "a", stdout) == nullptr)
     {
@@ -122,6 +123,7 @@ SDL_AppResult SDL_AppInit (void **appstate, const int argc, char **argv)
         perror ("setvbuf");
         goto error;
     }
+#endif /* REROUTE_STDOUT */
     printf ("stdout buf size: %d\n", STDOUT_BUF_SIZE);
     printf ("arguments:\n");
     for (auto i = 0; i < argc; i++)

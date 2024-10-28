@@ -137,8 +137,13 @@ target_include_directories(nuklear INTERFACE ${nuklear_package_SOURCE_DIR})
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+set(defines NAME="${PROJECT_NAME}")
+if (REROUTE_STDOUT)
+    list(APPEND defines REROUTE_STDOUT)
+endif (REROUTE_STDOUT)
+
 target_link_libraries(${PROJECT_NAME} SDL3::SDL3 SDL3_image::SDL3_image nuklear)
-target_compile_definitions(${PROJECT_NAME} PRIVATE NAME="${PROJECT_NAME}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE ${defines})
 
 if (EMSCRIPTEN)
     set_target_properties(

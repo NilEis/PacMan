@@ -379,6 +379,7 @@ void add_nuklear_windows (state_t *const state)
         add_bool_option (pause);
     }
     nk_end (&state->video.nuklear.ctx);
+#ifdef REROUTE_STDOUT
     if (nk_begin (&state->video.nuklear.ctx,
             "stdout",
             (struct nk_rect){ 10, 320, 400, 300 },
@@ -396,5 +397,6 @@ void add_nuklear_windows (state_t *const state)
             nk_filter_default);
     }
     nk_end (&state->video.nuklear.ctx);
+#endif /* REROUTE_STDOUT */
     nk_render (state, NK_ANTI_ALIASING_ON);
 }
